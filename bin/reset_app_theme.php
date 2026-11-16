@@ -12,18 +12,54 @@
  * Usage: php reset_app_theme.php [config.inc.php] [design ...]
  *
  *   config.inc.php  defaults to /usr/local/ispconfig/interface/lib/config.inc.php
- *   design ...      defaults to EVERY design this project ships. uninstall.sh
- *                   always passes the ones it actually removed; a bare manual
- *                   run means "get users off this project's designs", which is
- *                   the only thing a bare run can sensibly mean.
+ *   design ...      defaults to EVERY design this project ships, as listed in
+ *                   lib/designs.sh, minus any design whose directory another
+ *                   installer put on the panel. uninstall.sh always passes the
+ *                   ones it actually removed; a bare manual run means "get users
+ *                   off this project's designs", which is the only thing a bare
+ *                   run can sensibly mean.
+ *
+ * The designs it resets are named before the database is touched.
  */
 
-$defaults = array('clarity', 'classic');
+/**
+ * The designs a bare run resets: every name in lib/designs.sh, the table the
+ * installer reads, except a design whose directory under the panel's themes/
+ * holds no brand.php. Every design this project installs carries brand.php; a
+ * directory without one came from another installer (for cicada, typically
+ * the standalone ispconfig-cicada), and its users are not this project's to
+ * reset. Returns null when the table cannot be read.
+ */
+function reset_default_designs($designs_sh, $themes_dir) {
+    $src = @file_get_contents($designs_sh);
+    if($src === false || !preg_match('/^ALL_DESIGNS="([^"]*)"$/m', $src, $m)) return null;
+    $out = array();
+    foreach(preg_split('/\s+/', trim($m[1])) as $design) {
+        if($design === '') continue;
+        $dir = $themes_dir . '/' . $design;
+        if(is_dir($dir) && !is_file($dir . '/brand.php')) continue;
+        $out[] = $design;
+    }
+    return $out;
+}
 
 $args      = array_slice($argv, 1);
 $conf_path = (isset($args[0]) && $args[0] !== '') ? $args[0] : '/usr/local/ispconfig/interface/lib/config.inc.php';
 $themes    = array_slice($args, 1);
-if(!$themes) $themes = $defaults;
+if(!$themes) {
+    $designs_sh = __DIR__ . '/../lib/designs.sh';
+    $themes = reset_default_designs($designs_sh, dirname(dirname($conf_path)) . '/web/themes');
+    if($themes === null) {
+        fwrite(STDERR, "ERROR: cannot read the design list in $designs_sh.\n"
+            . "       Name the designs to reset after the config path, e.g.\n"
+            . "       php reset_app_theme.php $conf_path cicada\n");
+        exit(1);
+    }
+    if(!$themes) {
+        echo "  no design of this project is on the panel, so no user is reset\n";
+        exit(0);
+    }
+}
 
 //* A theme name reaches a query, so it is validated as a name and not merely
 //* escaped — and 'default' is refused outright: accepting it would let a typo
@@ -39,6 +75,8 @@ foreach($themes as $t) {
         exit(1);
     }
 }
+
+echo "  designs: " . implode(' ', $themes) . "\n";
 
 if(!is_readable($conf_path)) {
     fwrite(STDERR, "ERROR: ISPConfig config not readable: $conf_path\n");
