@@ -48,6 +48,7 @@ $checks = array(
     'page'    => __DIR__ . '/probe_page.php',
     'frozen'  => __DIR__ . '/probe_frozen.php',
     'cicada-css' => __DIR__ . '/probe_cicada_css.php',
+    'registry'   => __DIR__ . '/probe_registry.php',
 );
 
 $fail      = 0;
