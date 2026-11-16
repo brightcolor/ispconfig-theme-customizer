@@ -138,6 +138,16 @@ With a symlink install the panel reads the design from the clone, so a tag check
 
 No release listed below has a migration step, a schema change or a new column. Everything the Branding page stores lives in the same `sys_ini` row throughout.
 
+### v3.6.0+cicada.2
+
+Tightens the installer and the Branding page around designs that another installer put on the panel. Re-run `install.sh` as you installed; nothing stored changes, and in the generated shells only cicada's chart-script cache buster moves.
+
+- The Branding page counts a design as installed when its directory holds `brand.php`. A `themes/cicada` from the standalone theme is no longer previewed as this extension's Cicada, and a panel-wide `$conf['theme'] = 'cicada'` on that directory now gets the login note.
+- A bare `php bin/reset_app_theme.php` resets the users of every design in `lib/designs.sh`, cicada included, and leaves out a design whose directory came from another installer. It names the designs before it touches the database.
+- `--backup-dir` must lie outside the panel's whole web directory, `interface/web/`; a path such as `interface/web/old-themes` was accepted before and is now refused.
+- The generator stops on a stock shell whose colour sheet shares its line with another tag: removing that line would take the other tag along.
+- The re-run command at the end of `install.sh` names the script by its absolute path and quotes every argument, so it can be pasted back as it stands.
+
 ### v3.6.0+cicada.1
 
 Adds the cicada design: install it with `--design=cicada`. A `themes/cicada` directory left by the standalone ispconfig-cicada is moved to `--backup-dir` (default `ISPCONFIG_ROOT/theme-backups`) and replaced; leave the standalone installer unused on that panel afterwards, since it would put its own version back. classic's generated shell is unchanged byte for byte, and nothing stored changes.
