@@ -243,7 +243,7 @@
 
 **Files:** none in the repository; work in the session scratchpad.
 
-- [ ] **Step 1: Harness**: copy `../ispconfig-brightcolor/harness` into the scratchpad; in `lib.php` and `router.php` replace the theme name `brightcolor` with `cicada` and serve `/themes/cicada/` from the build; build `themes/cicada` from this branch into `build/themes/cicada`, its templates with `generate_shell_templates cicada <copy>/vendor/web/themes/default/templates themes/cicada <copy>/build/themes/cicada/templates` (`VENDOR` in the harness `lib.php`).
+- [ ] **Step 1: Harness**: set up a local render harness in the scratchpad: a router for PHP's built-in server that renders the stock pages of a vendored ISPConfig 3.3.1p1 tree (`<copy>/vendor`) and serves `/themes/cicada/` from a build directory. Build `themes/cicada` from this branch into `<copy>/build/themes/cicada`, its templates with `generate_shell_templates cicada <copy>/vendor/web/themes/default/templates themes/cicada <copy>/build/themes/cicada/templates`.
 - [ ] **Step 2: Branded variants**: for the accent `#FFD400`, the accent `#003366` with rail `#003366`, and a stored dark logo, write the sheet `render()` from `probe_render.php` produces to `build/themes/cicada/brand.css` and point the built shell's `brand.php` link at it (build copy only).
 - [ ] **Step 3: Screenshots** in the browser pane (desktop and mobile): login, dashboard, websites list; unbranded and the three variants; the unbranded login next to the standalone theme's.
 - [ ] **Step 4: Judge**: login header dark with the silhouette; markers visible with `#003366`; labels readable on `#FFD400`; charts in the accent. A finding goes back to its task with a failing test first.
