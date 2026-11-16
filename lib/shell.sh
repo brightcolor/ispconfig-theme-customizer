@@ -59,9 +59,24 @@ generate_shell_templates() {
   local design="$1" stock="$2" srcdir="$3" outdir="$4"
   local find_str="themes/<tmpl_var name='current_theme'>/assets/"
   local tpl src out prefix scene ins1 ins2 ins3 cred2 expected src_n out_n rc icons out_icons
-  local credit_label credit_url
+  local credit_label credit_url drop stock_colour design_colour stylesheet chart_script
+  local ins_css chart_line counts dropped charts asset
   credit_label="$(design_field "$design" credit_label)"
   credit_url="$(design_field "$design" credit_url)"
+  drop="$(design_field "$design" drop_sheet)"
+  stock_colour="$(design_field "$design" stock_colour)"
+  design_colour="$(design_field "$design" design_colour)"
+  stylesheet="$(design_field "$design" stylesheet)"
+  chart_script="$(design_field "$design" chart_script)"
+
+  # A design's own assets are linked with ?v=<cksum> below. A missing one would
+  # ship a link that 404s on every page, so it stops the build here.
+  for asset in $stylesheet $chart_script; do
+    if [ ! -f "$srcdir/$asset" ]; then
+      echo "ERROR: $design's $asset is missing from $srcdir." >&2
+      return 1
+    fi
+  done
 
   # ONE definition of "this line is a tab-icon <link>", used by the awk transform
   # (which deletes them) and by the shell check afterwards (which proves exactly
@@ -126,6 +141,20 @@ generate_shell_templates() {
     # lines, which is a different thing.
     cred2="<span class='nzc-credit-theme'><span class='nzc-credit-sep'> &middot; </span><a href='${credit_url}' target='_blank' rel='noopener'>${credit_label}</a></span>"
 
+    # A design's own stylesheet goes in after every stock sheet and directly
+    # before brand.php, so the brand overrides still win over it. Its chart
+    # defaults follow Chart.js, which stock loads in the body. Both carry
+    # ?v=<cksum>: the file names never change and ISPConfig sends no cache
+    # headers, so the URL has to move when the content does.
+    ins_css=''
+    if [ -n "$stylesheet" ]; then
+      ins_css="  <link rel='stylesheet' href='${prefix}themes/${design}/${stylesheet}?v=$(cksum "$srcdir/$stylesheet" | cut -d' ' -f1)' />"
+    fi
+    chart_line=''
+    if [ -n "$chart_script" ]; then
+      chart_line="  <script src='${prefix}themes/${design}/${chart_script}?v=$(cksum "$srcdir/$chart_script" | cut -d' ' -f1)'></script>"
+    fi
+
     # index()/substr rather than gsub(): the search string is a literal full of
     # regex metacharacters, and a literal search cannot be defeated by quoting.
     #
@@ -138,7 +167,9 @@ generate_shell_templates() {
     rc=0
     awk -v find="$find_str" -v repl="themes/default/assets/" \
         -v ins1="$ins1" -v ins2="$ins2" -v ins3="$ins3" -v cred2="$cred2" \
-        -v icon_re="$icon_re" -v cnt_file="$cnt_file" '
+        -v icon_re="$icon_re" -v cnt_file="$cnt_file" \
+        -v drop="$drop" -v stock_colour="$stock_colour" -v design_colour="$design_colour" \
+        -v ins_css="$ins_css" -v chart_line="$chart_line" '
         function lreplace(s,   acc, p) {
             acc = ""
             while ((p = index(s, find)) > 0) {
@@ -147,15 +178,34 @@ generate_shell_templates() {
             }
             return acc s
         }
+        # The stock colour the design replaces, by the same literal search.
+        function creplace(s,   acc, p) {
+            if (stock_colour == "") return s
+            acc = ""
+            while ((p = index(s, stock_colour)) > 0) {
+                acc = acc substr(s, 1, p - 1) design_colour
+                s   = substr(s, p + length(stock_colour))
+            }
+            return acc s
+        }
         # how many tags start on this line — one is the shape we handle
         function tag_count(s,   parts) { return split(s, parts, "<") - 1 }
-        { line = lreplace($0) }
+        { line = creplace(lreplace($0)) }
         line ~ icon_re {
             if (tag_count(line) != 1) { aborted = 1; exit 2 }
             icons++
             next
         }
-        !done && line ~ /<\/head>/ { print ins3; print ins1; print ins2; done = 1 }
+        # The stock sheet a design replaces wholesale, counted so the shell can
+        # refuse a panel where it is missing or doubled.
+        drop != "" && index(line, drop) > 0 { dropped++; next }
+        !done && line ~ /<\/head>/ {
+            print ins3
+            if (ins_css != "") print ins_css
+            print ins1
+            print ins2
+            done = 1
+        }
         # Split the footer credit into two addressable spans, preserving stock
         # indentation. Matching on both "powered by" and app_link keeps this off
         # any other line that happens to contain one of them.
@@ -169,7 +219,14 @@ generate_shell_templates() {
             next
         }
         { print line }
-        END { print icons + 0 > cnt_file; if (!aborted && !done) exit 1 }
+        chart_line != "" && index(line, "js/chartjs/chart.umd.js") > 0 { print chart_line; charts++ }
+        END {
+            # One string first: print followed by a parenthesised expression is
+            # parsed differently across awks, and panels run mawk.
+            tally = (icons + 0) " " (dropped + 0) " " (charts + 0)
+            print tally > cnt_file
+            if (!aborted && !done) exit 1
+        }
     ' "$src" > "$out" || rc=$?
 
     if [ "$rc" -eq 2 ]; then
@@ -185,17 +242,33 @@ generate_shell_templates() {
       return 1
     fi
 
-    # How many icon links awk removed. Read from the file awk wrote rather than
-    # counted again here: one definition of the pattern, one engine applying it,
-    # so the count and the deletion can never disagree.
-    icons="$(cat "$cnt_file" 2>/dev/null || true)"
-    case "$icons" in
-      ''|*[!0-9]*)
-        echo "ERROR: the template transform did not report how many icon links it" >&2
-        echo "       removed from $tpl, so its output cannot be verified." >&2
+    # What awk changed: icon links removed, stock sheets dropped, chart scripts
+    # added. Read from the file awk wrote rather than counted again here: one
+    # definition of each pattern, one engine applying it, so the counts and the
+    # changes can never disagree.
+    counts="$(cat "$cnt_file" 2>/dev/null || true)"
+    icons="${counts%% *}"
+    dropped="${counts#* }"; dropped="${dropped%% *}"
+    charts="${counts##* }"
+    case "$icons:$dropped:$charts" in
+      *[!0-9:]*|:*|*::*|*:)
+        echo "ERROR: the template transform did not report what it changed in $tpl" >&2
+        echo "       (icon links, stock sheets, chart scripts), so its output cannot be" >&2
+        echo "       verified." >&2
         return 1
         ;;
     esac
+
+    # A design that drops a stock sheet must find exactly one. None means the
+    # stock shell changed shape and the sheet may now load under another name,
+    # over the design; more than one is a shape this generator does not know.
+    if [ -n "$drop" ] && [ "$dropped" -ne 1 ]; then
+      echo "ERROR: $design replaces the stock stylesheet $drop, and $src links it" >&2
+      echo "       $dropped times. This ISPConfig's stock shell is not the shape $design" >&2
+      echo "       knows how to transform. Install classic or clarity instead and open an" >&2
+      echo "       issue with your ISPConfig version." >&2
+      return 1
+    fi
 
     # --- verify the output is the stock file plus exactly those changes ------
     # A silent miss here is the worst outcome this script has: a generated shell
@@ -215,11 +288,16 @@ generate_shell_templates() {
     # too is derived from the output rather than assumed, and a future ISPConfig
     # that moves the footer degrades to a warning instead of failing an install
     # over a courtesy line.
-    expected=$(( src_n + 3 - icons ))
+    # And for a design with assets of its own: +1 for its stylesheet, MINUS the
+    # stock sheet it dropped, +1 per chart script, each as awk reported it.
+    expected=$(( src_n + 3 - icons - dropped + charts ))
+    if [ -n "$ins_css" ]; then expected=$(( expected + 1 )); fi
     if grep -q "nzc-credit-ispconfig" "$out"; then expected=$(( expected + 1 )); fi
     if [ "$out_n" -ne "$expected" ]; then
       echo "ERROR: generated $tpl is $out_n lines, expected $expected" >&2
-      echo "       (stock $src_n + 3 head links - $icons icon links replaced)." >&2
+      echo "       (stock $src_n + 3 head links - $icons icon links replaced" >&2
+      echo "        - $dropped stock sheets dropped + $charts chart scripts" >&2
+      echo "        + the design's own stylesheet, if it has one)." >&2
       return 1
     fi
     if [ "$tpl" = "main.tpl.htm" ] && ! grep -q "nzc-credit-ispconfig" "$out"; then
@@ -242,6 +320,42 @@ generate_shell_templates() {
        || ! grep -q -F "themes/${design}/favicon.php" "$out"; then
       echo "ERROR: the brand endpoints are missing from the generated $tpl." >&2
       return 1
+    fi
+
+    # A design's own sheet: once, directly before brand.php, and brand.php the
+    # last stylesheet of the document, or something loaded later would paint
+    # over the brand. The replaced stock colour must be gone, and the chart
+    # script must sit once, right after Chart.js, wherever the stock shell
+    # loads Chart.js, and nowhere else.
+    if [ -n "$ins_css" ]; then
+      if [ "$(grep -c -F "$ins_css" "$out" || true)" != "1" ] \
+         || [ "$(grep -A1 -F "$ins_css" "$out" | tail -n 1)" != "$ins1" ]; then
+        echo "ERROR: $design's stylesheet is not linked once, directly before brand.php," >&2
+        echo "       in the generated $tpl." >&2
+        return 1
+      fi
+      if [ "$(grep "rel='stylesheet'" "$out" | tail -n 1)" != "$ins1" ]; then
+        echo "ERROR: brand.php is not the last stylesheet in the generated $tpl, so a" >&2
+        echo "       sheet loaded after it would paint over the brand." >&2
+        return 1
+      fi
+    fi
+    if [ -n "$stock_colour" ] && grep -q -F "$stock_colour" "$out"; then
+      echo "ERROR: the generated $tpl still carries the stock colour $stock_colour." >&2
+      return 1
+    fi
+    if [ -n "$chart_line" ]; then
+      if grep -q "js/chartjs/chart.umd.js" "$src"; then
+        if [ "$charts" != "1" ] \
+           || [ "$(grep -A1 "js/chartjs/chart.umd.js" "$out" | tail -n 1)" != "$chart_line" ]; then
+          echo "ERROR: $design's chart script is not loaded once, right after Chart.js," >&2
+          echo "       in the generated $tpl." >&2
+          return 1
+        fi
+      elif [ "$charts" != "0" ]; then
+        echo "ERROR: the generated $tpl loads $design's chart script without Chart.js." >&2
+        return 1
+      fi
     fi
 
     # Exactly one tab-icon link, and it is ours. This is the check that catches

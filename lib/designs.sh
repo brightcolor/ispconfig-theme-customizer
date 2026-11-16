@@ -8,7 +8,7 @@
 
 # Every design this repository ships, in install order: the Design picker lists
 # them in the order the documentation introduces them.
-ALL_DESIGNS="clarity classic"
+ALL_DESIGNS="clarity classic cicada"
 
 # design_known DESIGN — exit 0 when DESIGN is one of ALL_DESIGNS.
 design_known() {
@@ -37,6 +37,14 @@ design_field() {
     classic:shell)        echo "generated" ;;
     classic:credit_label) echo "Classic" ;;
     classic:credit_url)   echo "https://github.com/wadejbeckett/ispconfig-theme-customizer" ;;
+    cicada:shell)         echo "generated" ;;
+    cicada:credit_label)  echo "Cicada" ;;
+    cicada:credit_url)    echo "https://github.com/brightcolor/ispconfig-theme-customizer" ;;
+    cicada:drop_sheet)    echo "stylesheets/themes/default/theme.min.css" ;;
+    cicada:stock_colour)  echo "#cc151c" ;;
+    cicada:design_colour) echo "#dd630d" ;;
+    cicada:stylesheet)    echo "assets/stylesheets/cicada.css" ;;
+    cicada:chart_script)  echo "assets/javascripts/cicada-charts.js" ;;
     *)                    ;;
   esac
 }
