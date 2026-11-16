@@ -103,7 +103,7 @@ sudo ./install.sh
 - `--design=<name>` takes `clarity`, `classic`, `cicada` or `all`, and is repeatable. It is a separate axis from `--theme`/`--module`/`--all`: those pick which halves, this picks which design the theme half means. Default is `clarity`.
 - `--copy` copies real files instead of symlinking. With symlinks the panel reads from the clone, so the clone and every parent directory must stay traversable by the web server; the installer warns if they are not.
 - `--no-assign` skips assigning the module to admin users; do it by hand in *System → CP Users → edit the admin user → Modules*.
-- `--backup-dir=<path>` is where a design directory another installer left in `themes/` is moved before this one takes its place, for example a `themes/cicada` from the standalone theme. Default `ISPCONFIG_ROOT/theme-backups`; it must lie outside `themes/`, because ISPConfig offers every directory there in its Design picker.
+- `--backup-dir=<path>` is where a design directory another installer left in `themes/` is moved before this one takes its place, for example a `themes/cicada` from the standalone theme. Default `ISPCONFIG_ROOT/theme-backups`; it must lie outside the panel's web directory `ISPCONFIG_ROOT/interface/web`, because the web server serves every file there and ISPConfig offers every directory under its `themes/` in the Design picker.
 - `ISPCONFIG_ROOT` defaults to `/usr/local/ispconfig`.
 
 On a multiserver setup, install only on the server that serves the web interface. Then pick the design per user in *Tools → User Settings → Design*.

@@ -58,6 +58,17 @@ t_ok "the refusal says it must lie outside themes" $?
 [ ! -e "$themes/old" ]
 t_ok "the refused directory is never created" $?
 
+# Anywhere else under interface/web/ the web server would hand the moved
+# design's files to anyone who asks for them, so that is refused as well,
+# however the path is spelled.
+for bad in "$root/interface/web/old-themes" "$themes/../old-themes"; do
+  bash "$repo/install.sh" $flags "--backup-dir=$bad" "$root" > "$work/run4.txt" 2>&1
+  [ $? -ne 0 ]
+  t_ok "a backup directory under the web root is refused ($bad)" $? "$(tail -n 5 "$work/run4.txt")"
+  grep -q -F "outside the panel's web directory" "$work/run4.txt"
+  t_ok "the refusal names the web directory ($bad)" $?
+done
+
 # ---- uninstall --------------------------------------------------------------
 bash "$repo/uninstall.sh" --theme --design=cicada "$root" > "$work/un.txt" 2>&1
 [ ! -e "$themes/cicada" ]
