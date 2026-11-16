@@ -79,9 +79,11 @@ mkdir -p "$work/nosheet-stock" "$work/nosheet-cicada" "$work/nosheet-classic"
 for f in main.tpl.htm main_login.tpl.htm; do
   grep -v "theme.min.css" "$fixtures/$f" > "$work/nosheet-stock/$f"
 done
-generate_shell_templates cicada "$work/nosheet-stock" "$cic_src" "$work/nosheet-cicada" 2>/dev/null
+generate_shell_templates cicada "$work/nosheet-stock" "$cic_src" "$work/nosheet-cicada" 2> "$work/nosheet.err"
 [ $? -ne 0 ]
 t_ok "cicada: refuses a shell without the colour sheet" $?
+grep -q "replaces the stock stylesheet" "$work/nosheet.err"
+t_ok "cicada: the refusal names the stylesheet it replaces" $? "$(cat "$work/nosheet.err")"
 generate_shell_templates classic "$work/nosheet-stock" "$repo/themes/classic" "$work/nosheet-classic"
 t_ok "classic: still generates without the colour sheet" $?
 
