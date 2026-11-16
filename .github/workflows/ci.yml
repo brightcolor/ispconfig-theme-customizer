@@ -255,7 +255,12 @@ jobs:
         # markup. Everything it does ship is named here.
         run: |
           set -e
-          unexpected="$(find themes/cicada -type f \n            ! -path 'themes/cicada/brand.php' ! -path 'themes/cicada/title.php' \n            ! -path 'themes/cicada/favicon.php' ! -path 'themes/cicada/README.md' \n            ! -path 'themes/cicada/LICENSE' \n            ! -path 'themes/cicada/assets/stylesheets/cicada.css' \n            ! -path 'themes/cicada/assets/javascripts/cicada-charts.js')"
+          unexpected="$(find themes/cicada -type f \
+            ! -path 'themes/cicada/brand.php' ! -path 'themes/cicada/title.php' \
+            ! -path 'themes/cicada/favicon.php' ! -path 'themes/cicada/README.md' \
+            ! -path 'themes/cicada/LICENSE' \
+            ! -path 'themes/cicada/assets/stylesheets/cicada.css' \
+            ! -path 'themes/cicada/assets/javascripts/cicada-charts.js')"
           if [ -n "$unexpected" ]; then
             echo "::error::themes/cicada must contain only brand.php, title.php, favicon.php, README.md, LICENSE, cicada.css and cicada-charts.js:"
             echo "$unexpected"
