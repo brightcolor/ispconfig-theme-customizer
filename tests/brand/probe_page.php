@@ -285,9 +285,16 @@ foreach (array("setRatio('nz-rail-ratio'", "setRatio('nz-rail-light-ratio'",
     t_ok("the script wires: $needle", strpos($js, $needle) !== false);
 }
 //* The live panes draw a mark the way the server-rendered swatch beside them
-//* does, filter included, so a Cicada silhouette is not previewed in colour.
+//* does, filter and opacity included, so a Cicada silhouette is not previewed
+//* in colour. Looked for inside paintNavBrand's own body, which ends at the
+//* first line closing it at its own indent: a later function setting a filter
+//* must not satisfy this.
+$paint = preg_match('/^( *)function paintNavBrand\(sel, entry\) \{\n(.*?)\n\1\}$/ms', $js, $m) === 1 ? $m[2] : '';
+t_ok('paintNavBrand is found with its body', $paint !== '');
 t_ok('the live panes copy the swatch filter',
-    preg_match('/function paintNavBrand\(sel, entry\) \{.*?img\.style\.filter = /s', $js) === 1);
+    strpos($paint, 'img.style.filter = from ? from.style.filter') !== false);
+t_ok('...and its opacity',
+    strpos($paint, 'img.style.opacity = from ? from.style.opacity') !== false);
 //* The login pull has to be cleared as well as painted, or a mark an earlier
 //* response put there survives a change that resolves to none.
 t_eq('every nav-brand slot is cleared when nothing resolves',

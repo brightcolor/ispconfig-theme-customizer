@@ -449,7 +449,7 @@ class page_action extends tform_actions {
         //* Each logo row is rendered in TWO halves into two slots: the 108px
         //* mark column beside the uploader takes the first surface's swatch, and
         //* the full-width strip under the block takes every other surface's. One
-        //* container held all of them and, on a panel with both designs
+        //* container held all of them and, on a panel with clarity and classic
         //* installed, stacked three swatches down over the path field below.
         $fb_dark  = $app->lng('logo_fallback_from_dark_txt');
         $fb_light = $app->lng('logo_fallback_from_light_txt');

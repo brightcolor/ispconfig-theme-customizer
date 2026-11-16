@@ -30,7 +30,7 @@
 # Branding page: logo, panel name and the per-role news feeds are read by
 # ISPConfig core itself, so those brand the stock theme too. Accent colour,
 # login background and version-hiding need a brand-aware design, which is what
-# --theme installs. Neither design is the product's identity — anything that
+# --theme installs. No design is the product's identity — anything that
 # reads the same sys_ini keys inherits the Branding page, and CI enforces that
 # contract.
 #
@@ -49,7 +49,8 @@
 #                   by hand in System > CP Users > edit the admin user > Modules
 #     --backup-dir=<path>  where a design directory another installer left in
 #                   themes/ is moved before this one takes its place. Default
-#                   ISPCONFIG_ROOT/theme-backups; it must lie outside themes/.
+#                   ISPCONFIG_ROOT/theme-backups; it must lie outside the
+#                   panel's web directory, ISPCONFIG_ROOT/interface/web.
 #     ISPCONFIG_ROOT defaults to /usr/local/ispconfig
 #
 # --design is deliberately a SEPARATE axis from --theme/--module/--all rather
@@ -146,13 +147,23 @@ on_exit() {
         echo "ISPConfig will reset every user on them to the default theme at their next" >&2
         echo "login, without showing an error. Re-run this script to finish — it is safe" >&2
         echo "to repeat:" >&2
-        echo "    $0 ${ORIGINAL_ARGS:-}" >&2
+        echo "    $(rerun_command)" >&2
     else
         echo "Re-run this script to finish. It is safe to run repeatedly." >&2
     fi
 }
 trap on_exit EXIT
-ORIGINAL_ARGS="$*"
+
+# The re-run command both notes print: this script by its absolute path and
+# every argument quoted for the shell, so the line can be pasted back as it
+# stands from any directory, a path with a space included.
+ORIGINAL_ARGS=("$@")
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+rerun_command() {
+    local line
+    line="$(printf '%q ' "$SELF" ${ORIGINAL_ARGS[@]+"${ORIGINAL_ARGS[@]}"})"
+    printf '%s\n' "${line% }"
+}
 
 # The design table and the shared shell generator. Sourced before the arguments
 # are read, because --design= is checked against the table.
@@ -238,18 +249,19 @@ CONF="$ISPC_ROOT/interface/lib/config.inc.php"
 SERVER_CONF="$ISPC_ROOT/server/lib/config.inc.php"
 
 # Where a design directory another installer left in themes/ goes before this
-# one takes its place (move_aside). ISPConfig offers every directory under
-# themes/ in its Design picker, a moved one included, so a backup directory
-# there would put the old design back on offer. Refused before anything is
-# touched.
+# one takes its place (move_aside). Anywhere under interface/web/ the web server
+# hands the moved files to anyone who asks for them, and under themes/ ISPConfig
+# would also offer the moved design in its Design picker again. Refused before
+# anything is touched, after resolving the path, so web/themes/../x counts too.
 BACKUP_DIR="${BACKUP_DIR:-$ISPC_ROOT/theme-backups}"
 backup_abs="$(realpath -m -- "$BACKUP_DIR" 2>/dev/null || printf '%s' "$BACKUP_DIR")"
-themes_abs="$(realpath -m -- "$THEMES_DIR" 2>/dev/null || printf '%s' "$THEMES_DIR")"
+web_abs="$(realpath -m -- "$WEB_DIR" 2>/dev/null || printf '%s' "$WEB_DIR")"
 case "$backup_abs/" in
-  "$themes_abs"/*)
-    echo "ERROR: --backup-dir must lie outside $THEMES_DIR." >&2
-    echo "       ISPConfig offers every directory there in its Design picker, so a" >&2
-    echo "       design moved there would stay selectable. Choose a directory such as" >&2
+  "$web_abs"/*)
+    echo "ERROR: --backup-dir must lie outside the panel's web directory $WEB_DIR." >&2
+    echo "       The web server serves every file there, and ISPConfig offers every" >&2
+    echo "       directory under its themes/ in the Design picker, so a design moved" >&2
+    echo "       there would stay reachable. Choose a directory such as" >&2
     echo "       $ISPC_ROOT/theme-backups." >&2
     exit 2
     ;;
@@ -337,7 +349,7 @@ check_traversable() {
 # deploy() replaces it. Every design this project installs carries brand.php,
 # so a real directory without one came from another installer — for cicada,
 # typically the standalone ispconfig-cicada — and deploy() would otherwise
-# delete it. It goes to $BACKUP_DIR, outside themes/, intact.
+# delete it. It goes to $BACKUP_DIR, outside the web directory, intact.
 # $1 = destination dir, $2 = design name
 move_aside() {
   local dest="$1" name="$2" target
@@ -398,8 +410,8 @@ INSTALL_STARTED=1
 # --- theme ------------------------------------------------------------------
 if [ -n "$WANT_THEME" ]; then
   [ -d "$THEMES_DIR" ] || { echo "ERROR: $THEMES_DIR not found — is ISPCONFIG_ROOT correct?" >&2; exit 1; }
-  # Both designs lean on the stock theme: Clarity inherits its vendor assets,
-  # classic inherits everything AND is generated from its templates.
+  # Every design leans on the stock theme: clarity inherits its vendor assets,
+  # classic and cicada load its assets AND are generated from its templates.
   [ -d "$THEMES_DIR/default" ] || { echo "ERROR: $THEMES_DIR/default missing — the designs inherit vendor assets from it." >&2; exit 1; }
 
   # --- detect ISPC_APP_VERSION once, stamp every design with it ------------
@@ -500,7 +512,7 @@ if [ -n "$WANT_THEME" ]; then
   say "  can reach the login page. Deny them at the web-server layer."
   if [ -d "$ROOT/contrib/webserver" ]; then
     say "  Ready-made Apache and nginx snippets: contrib/webserver/ (see its README —"
-    say "  the rules match any design directory, so they cover classic too)."
+    say "  the rules match any design directory, so they cover every design)."
   fi
   say
 fi
@@ -602,8 +614,8 @@ INSTALL_COMPLETED=1
     say "  $STEP. Open Branding and set your logo, panel name, colours and login details."
     say "     Logo, panel name and the news-feed toggle also apply to the STOCK ISPConfig"
     say "     theme — core reads those itself. Accent colour, login background and version"
-    say "     hiding need a brand-aware design: clarity, or classic if you want to keep"
-    say "     the stock look (--design=classic)."
+    say "     hiding need a brand-aware design: clarity, classic for the stock look"
+    say "     (--design=classic), or cicada for a dark one (--design=cicada)."
   fi
   say
   if [ -n "$WANT_THEME" ]; then
@@ -611,7 +623,7 @@ INSTALL_COMPLETED=1
     say "3.3.1p1 -> 3.3.1p2, re-run this script so the version gate is re-stamped."
     say "Skip it and the design silently reverts to 'default' at every login."
     say "Re-run it with the same flags:"
-    say "    $0 $ORIGINAL_ARGS"
+    say "    $(rerun_command)"
     for d in $DESIGNS; do
       case "$(design_field "$d" shell)" in
         generated)

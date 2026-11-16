@@ -79,11 +79,28 @@ mkdir -p "$work/nosheet-stock" "$work/nosheet-cicada" "$work/nosheet-classic"
 for f in main.tpl.htm main_login.tpl.htm; do
   grep -v "theme.min.css" "$fixtures/$f" > "$work/nosheet-stock/$f"
 done
-generate_shell_templates cicada "$work/nosheet-stock" "$cic_src" "$work/nosheet-cicada" 2>/dev/null
+generate_shell_templates cicada "$work/nosheet-stock" "$cic_src" "$work/nosheet-cicada" 2> "$work/nosheet.err"
 [ $? -ne 0 ]
 t_ok "cicada: refuses a shell without the colour sheet" $?
+grep -q "replaces the stock stylesheet" "$work/nosheet.err"
+t_ok "cicada: the refusal names the stylesheet it replaces" $? "$(cat "$work/nosheet.err")"
 generate_shell_templates classic "$work/nosheet-stock" "$repo/themes/classic" "$work/nosheet-classic"
 t_ok "classic: still generates without the colour sheet" $?
+
+# A colour sheet sharing its line with another tag: dropping the line would
+# drop that tag too, so the generator refuses and keeps the other tag alive.
+mkdir -p "$work/shared-stock" "$work/shared"
+for f in main.tpl.htm main_login.tpl.htm; do
+  sed "s|theme.min.css' />|theme.min.css' /><link rel='stylesheet' href='extra.css' />|" \
+    "$fixtures/$f" > "$work/shared-stock/$f"
+done
+grep -q "theme.min.css' /><link rel='stylesheet' href='extra.css' />" "$work/shared-stock/main.tpl.htm"
+t_ok "the shared-line fixture holds both tags on one line" $?
+generate_shell_templates cicada "$work/shared-stock" "$cic_src" "$work/shared" 2> "$work/shared.err"
+[ $? -ne 0 ]
+t_ok "cicada: refuses a colour sheet that shares its line with another tag" $?
+grep -q "shares its line" "$work/shared.err"
+t_ok "cicada: the refusal names the shared line" $? "$(cat "$work/shared.err")"
 
 t_done
 echo "shell suite passed"

@@ -31,7 +31,7 @@
 #     --theme            remove only the design(s)
 #     --module           remove only the Branding page
 #     --all              remove both — the default when no flag is given
-#     --design=<n>       which design: clarity, classic, or all. Repeatable.
+#     --design=<n>       which design: clarity, classic, cicada, or all. Repeatable.
 #                        DEFAULTS TO ALL, which is the opposite of install.sh's
 #                        default and deliberate: installing picks what you want,
 #                        uninstalling has to clear anything that might be there.

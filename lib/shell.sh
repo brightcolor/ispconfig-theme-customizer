@@ -19,7 +19,11 @@
 #
 # Returns 1, with the reason on stderr, when it refuses.
 #
-# The whole transform is four mechanical changes, and nothing else may differ:
+# Every generated design gets four mechanical changes, numbered below; the
+# fourth, splitting the stock footer credit into two addressable spans, is
+# described where it is applied. A design's table entry may add its own:
+# drop a stock sheet, swap the stock colour for its own, link its stylesheet
+# and its chart script (cicada). Nothing else may differ:
 #
 #   1. themes/<tmpl_var name='current_theme'>/assets/  ->  themes/default/assets/
 #      Template fallback does NOT extend to assets. Under a generated design
@@ -41,10 +45,11 @@
 #      Stock declares the icon three times (two sized PNGs and the legacy
 #      shortcut .ico) and the replacement is ONE unsized, untyped link: what the
 #      endpoint returns depends on what the operator stored, and a browser skips
-#      a link whose declared type it cannot render. That makes this the one
-#      change that alters the output's LINE COUNT, so the count check below is
-#      derived from how many icon links were actually removed rather than being
-#      a constant — see it for the arithmetic.
+#      a link whose declared type it cannot render. That makes this one of
+#      the changes that alter the output's LINE COUNT (a design's dropped
+#      sheet, its own stylesheet and its chart script are the others), so the
+#      count check below is derived from how many lines each actually changed
+#      rather than being a constant — see it for the arithmetic.
 #      The other icon references (apple-touch-icon, mask-icon, manifest, tile
 #      config) are deliberately left pointing at stock's assets: they are
 #      platform install artefacts with their own size and format contracts, not
@@ -158,12 +163,13 @@ generate_shell_templates() {
     # index()/substr rather than gsub(): the search string is a literal full of
     # regex metacharacters, and a literal search cannot be defeated by quoting.
     #
-    # Exit status is a three-way answer, not a boolean: 0 transformed, 1 no
-    # </head> (nowhere to link anything), 2 an icon <link> that shares its line
-    # with other markup — a shape this generator does not know how to rewrite,
-    # which must stop the install rather than silently drop whatever else was on
-    # that line. The END rule's own exit would override the earlier one, hence
-    # the `aborted` guard.
+    # Exit status is a four-way answer: 0 transformed, 1 no </head> (nowhere to
+    # link anything), 2 an icon <link> that shares its line with other markup,
+    # 3 the stock sheet a design drops sharing its line with other markup. Both
+    # 2 and 3 are shapes this generator does not know how to rewrite: deleting
+    # the line would take whatever else was on it along, so the install stops.
+    # The END rule's own exit would override the earlier one, hence the
+    # `aborted` guard.
     rc=0
     awk -v find="$find_str" -v repl="themes/default/assets/" \
         -v ins1="$ins1" -v ins2="$ins2" -v ins3="$ins3" -v cred2="$cred2" \
@@ -197,8 +203,13 @@ generate_shell_templates() {
             next
         }
         # The stock sheet a design replaces wholesale, counted so the shell can
-        # refuse a panel where it is missing or doubled.
-        drop != "" && index(line, drop) > 0 { dropped++; next }
+        # refuse a panel where it is missing or doubled. Its line goes, so it
+        # must hold that one tag and nothing else.
+        drop != "" && index(line, drop) > 0 {
+            if (tag_count(line) != 1) { aborted = 1; exit 3 }
+            dropped++
+            next
+        }
         !done && line ~ /<\/head>/ {
             print ins3
             if (ins_css != "") print ins_css
@@ -236,6 +247,13 @@ generate_shell_templates() {
       echo "       endpoint, and it will not delete a line carrying anything else." >&2
       echo "       Install clarity instead (--design=clarity) and open an issue with" >&2
       echo "       your ISPConfig version." >&2
+      return 1
+    elif [ "$rc" -eq 3 ]; then
+      echo "ERROR: the stock stylesheet $drop shares its line with other markup in $src:" >&2
+      grep -n -F "$drop" "$src" >&2 || true
+      echo "       $design removes that stylesheet by deleting its line, and it will not" >&2
+      echo "       delete a line carrying anything else. Install classic or clarity" >&2
+      echo "       instead and open an issue with your ISPConfig version." >&2
       return 1
     elif [ "$rc" -ne 0 ]; then
       echo "ERROR: no </head> in $src — nowhere to link the brand endpoints." >&2

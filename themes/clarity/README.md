@@ -1,6 +1,6 @@
 # clarity — the Clarity design for ISPConfig
 
-One of the two designs this extension ships, and the default one: a ground-up dark and light interface. The other is `classic`, the stock ISPConfig look made brandable — same brand contract, different skin. Install Clarity with `../../install.sh`, which also sets up the in-panel **Branding** page unless you pass `--theme` for the design alone; `--design=classic` or `--design=all` picks the other one, or both (see the repo README for the two-minute guide).
+One of the three designs this extension ships, and the default one: a ground-up dark and light interface. The others read the same brand contract in a different skin: `classic`, the stock ISPConfig look made brandable, and `cicada`, a dark onyx skin. Install Clarity with `../../install.sh`, which also sets up the in-panel **Branding** page unless you pass `--theme` for the design alone; `--design=classic`, `--design=cicada` or `--design=all` picks another one, or every one (the repo README's *Install* section has the steps).
 
 The logo, panel name and colours are not baked in: `brand.php` reads them at render time from the `sys_ini` keys the Branding page writes, and falls back to the neutral defaults shipped here when nothing is set. `classic` reads the same keys through its own `brand.php`, and every option on the Branding page applies to both designs. That shared contract is why there is a single version number.
 

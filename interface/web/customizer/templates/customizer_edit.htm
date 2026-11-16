@@ -756,7 +756,7 @@
      the label has to go with it. It cannot live INSIDE the slot — the preview
      endpoint replaces that slot's innerHTML wholesale and would delete it on the
      first refresh, and its presence would defeat :empty. :has() is the same
-     mechanism both designs' brand.php already use for the design-picker rule;
+     mechanism every design's brand.php already uses for the design-picker rule;
      where it is unsupported the label stands over an empty row, which is untidy
      rather than broken. */
   #nz-brandpage .nz-surfacelabel:has(+ .nz-upload-more:empty) { display: none; }

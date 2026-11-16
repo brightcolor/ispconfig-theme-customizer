@@ -31,8 +31,9 @@ own `themes/default/templates/`. Cicada gets classic's four changes (asset paths
 pinned to `themes/default/assets/`, the three brand endpoints linked, the tab
 icons replaced by `favicon.php`, the footer credit split) and four of its own:
 
-- the stock colour sheet `themes/default/theme.min.css` is dropped, because
-  `cicada.css` replaces it wholesale;
+- the stock colour sheet
+  `themes/default/assets/stylesheets/themes/default/theme.min.css` is dropped,
+  because `cicada.css` replaces it wholesale;
 - stock's red `#cc151c` (browser theme colour, tile colour, mask icon) becomes
   Cicada's `#dd630d`;
 - `cicada.css` is linked after every stock sheet and directly before `brand.php`,

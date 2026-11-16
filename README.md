@@ -19,7 +19,7 @@ Those are the clarity design; `mockup/shots/default-desktop.png` is the stock pa
 
 ## The three designs
 
-They are alternatives, not layers: pick one with `--design`, or install both and let each user choose in the Design picker under *Tools → User Settings*.
+Each one is a complete design on its own: pick one with `--design`, or install several (`--design=all` for every one) and let each user choose in the Design picker under *Tools → User Settings*.
 
 ### clarity — the default
 
@@ -33,7 +33,7 @@ It overrides **seven templates** and nothing else: three shell templates (`main.
 
 Stock layout and stock stylesheets, with the logo, panel name, accent colour, navigation band and login background applied on top. It has no CSS, fonts or images of its own; every asset is served from `themes/default/assets/`.
 
-Its two shell templates (`main.tpl.htm`, `main_login.tpl.htm`) are **generated at install time** from the target panel's own `themes/default/templates/`, which is why there is no `templates/` directory under `themes/classic/` in the repository. `install.sh` applies four mechanical changes — pin asset paths to `themes/default/assets/`, link `brand.php`, `title.php` and `favicon.php` before `</head>`, replace stock's icon links with the `favicon.php` one, and split the stock footer credit into two addressable spans — and aborts rather than deploy a template it cannot account for. The installer run already required after a panel upgrade regenerates the shell from the new stock markup, so there is nothing to diff by hand. Details in [`themes/classic/README.md`](themes/classic/README.md).
+Its two shell templates (`main.tpl.htm`, `main_login.tpl.htm`) are **generated at install time** from the target panel's own `themes/default/templates/`, which is why there is no `templates/` directory under `themes/classic/` in the repository. The shared generator in `lib/shell.sh`, which `install.sh` runs, applies four mechanical changes — pin asset paths to `themes/default/assets/`, link `brand.php`, `title.php` and `favicon.php` before `</head>`, replace stock's icon links with the `favicon.php` one, and split the stock footer credit into two addressable spans — and aborts rather than deploy a template it cannot account for. The installer run already required after a panel upgrade regenerates the shell from the new stock markup, so there is nothing to diff by hand. Details in [`themes/classic/README.md`](themes/classic/README.md).
 
 ### cicada — dark onyx
 
@@ -81,7 +81,7 @@ The uploader exists because the stock panel's own logo upload is currently non-f
 
 `logo_on_dark` and `favicon` are stored in `sys_ini.config` rather than in columns, so each is re-read whenever the panel loads a global setting and is journalled into `sys_datalog` by the next save. The column is `longtext`, so nothing truncates, and the upload caps bound it: 45 KB for the logo, 15 KB for the favicon. `logo_url_on_dark` and `favicon_url` store a path instead. The tab icon is served by `themes/<design>/favicon.php`; with nothing stored it falls back to the design's shipped icon, so an unbranded panel looks as it did.
 
-Both footer toggles work on both designs and default to **on**, and neither touches a licence notice. The donation dashlet switch also defaults to on; it is admin-only in core, so it concerns your own dashboard rather than what customers see.
+Both footer toggles work on every design and default to **on**, and neither touches a licence notice. The donation dashlet switch also defaults to on; it is admin-only in core, so it concerns your own dashboard rather than what customers see.
 
 ## Install
 
@@ -103,7 +103,7 @@ sudo ./install.sh
 - `--design=<name>` takes `clarity`, `classic`, `cicada` or `all`, and is repeatable. It is a separate axis from `--theme`/`--module`/`--all`: those pick which halves, this picks which design the theme half means. Default is `clarity`.
 - `--copy` copies real files instead of symlinking. With symlinks the panel reads from the clone, so the clone and every parent directory must stay traversable by the web server; the installer warns if they are not.
 - `--no-assign` skips assigning the module to admin users; do it by hand in *System → CP Users → edit the admin user → Modules*.
-- `--backup-dir=<path>` is where a design directory another installer left in `themes/` is moved before this one takes its place, for example a `themes/cicada` from the standalone theme. Default `ISPCONFIG_ROOT/theme-backups`; it must lie outside `themes/`, because ISPConfig offers every directory there in its Design picker.
+- `--backup-dir=<path>` is where a design directory another installer left in `themes/` is moved before this one takes its place, for example a `themes/cicada` from the standalone theme. Default `ISPCONFIG_ROOT/theme-backups`; it must lie outside the panel's web directory `ISPCONFIG_ROOT/interface/web`, because the web server serves every file there and ISPConfig offers every directory under its `themes/` in the Design picker.
 - `ISPCONFIG_ROOT` defaults to `/usr/local/ispconfig`.
 
 On a multiserver setup, install only on the server that serves the web interface. Then pick the design per user in *Tools → User Settings → Design*.

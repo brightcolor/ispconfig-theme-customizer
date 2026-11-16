@@ -286,14 +286,30 @@ if (function_exists('customizer_logo_surfaces_all')) {
 t_ok('customizer_installed_designs() exists', function_exists('customizer_installed_designs'));
 if (function_exists('customizer_installed_designs')) {
     $root = sys_get_temp_dir() . '/brandprobe_' . getmypid();
+    //* Every design this project installs carries brand.php; that file is
+    //* what tells its directory apart from another installer's.
     @mkdir($root . '/clarity', 0700, true);
+    @touch($root . '/clarity/brand.php');
     define('ISPC_THEMES_PATH', $root);
 
     t_eq('only the deployed design is described', customizer_installed_designs('clarity'), array('clarity'));
     t_eq('a design that is not deployed is not described',
         customizer_installed_designs('clarity'), array('clarity'));
 
+    //* Another installer's Cicada (the standalone theme): a real directory
+    //* without brand.php. It reads no brand contract, so the Branding page
+    //* must not preview this project's Cicada as if it were on the panel.
+    @mkdir($root . '/cicada', 0700, true);
+    t_eq("another installer's design directory is not described",
+        customizer_installed_designs('clarity'), array('clarity'));
+    t_eq("...not even when it is the active design",
+        customizer_installed_designs('cicada'), array('clarity'));
+    @rmdir($root . '/cicada');
+    t_eq('an active design the directory check cannot see is still described',
+        customizer_installed_designs('cicada'), array('cicada', 'clarity'));
+
     @mkdir($root . '/classic', 0700, true);
+    @touch($root . '/classic/brand.php');
     t_eq('both deployed designs are described, active first',
         customizer_installed_designs('clarity'), array('clarity', 'classic'));
     t_eq('the active design leads even when it is not the first known one',
@@ -312,6 +328,8 @@ if (function_exists('customizer_installed_designs')) {
     t_ok('an arbitrary session theme is not admitted',
         !in_array('../../etc', customizer_installed_designs('../../etc'), true));
 
+    @unlink($root . '/clarity/brand.php');
+    @unlink($root . '/classic/brand.php');
     @rmdir($root . '/clarity');
     @rmdir($root . '/classic');
     @rmdir($root);
@@ -405,6 +423,12 @@ if (function_exists('customizer_login_notice_html')) {
     t_ok('a third-party panel-wide theme gets the note too',
         strpos(customizer_login_notice_html('phosphor', $both, $say, '/usr/local/ispconfig'),
             '<code>phosphor</code>') !== false);
+    //* $conf['theme'] = 'cicada' with another installer's themes/cicada: the
+    //* name is one this project ships, the directory is not, so the login
+    //* screen shows a design that reads no brand contract.
+    t_ok("a panel-wide theme of this project's name, installed by another installer, gets the note",
+        strpos(customizer_login_notice_html('cicada', $both, $say, '/usr/local/ispconfig'),
+            '<code>cicada</code>') !== false);
     t_ok('an unset theme is named as core falls back to it',
         strpos(customizer_login_notice_html('', $both, $say, '/usr/local/ispconfig'), '<code>default</code>') !== false);
     t_ok('a theme name is escaped, since it is interpolated into markup',

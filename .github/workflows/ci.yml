@@ -142,7 +142,7 @@ jobs:
             # against.
             #
             # Both names must appear LITERALLY, and neither is a substring of
-            # the other. Both designs now spell them at the CALL SITE, which is
+            # the other. Every design now spells them at the CALL SITE, which is
             # what gives this grep something real to find: classic used to
             # compose the key inside brand_logo_variant_pref()
             # ('logo_variant_' . $surface), and a composed lookup is invisible to
