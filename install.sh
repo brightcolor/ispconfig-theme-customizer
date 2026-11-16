@@ -147,13 +147,23 @@ on_exit() {
         echo "ISPConfig will reset every user on them to the default theme at their next" >&2
         echo "login, without showing an error. Re-run this script to finish — it is safe" >&2
         echo "to repeat:" >&2
-        echo "    $0 ${ORIGINAL_ARGS:-}" >&2
+        echo "    $(rerun_command)" >&2
     else
         echo "Re-run this script to finish. It is safe to run repeatedly." >&2
     fi
 }
 trap on_exit EXIT
-ORIGINAL_ARGS="$*"
+
+# The re-run command both notes print: this script by its absolute path and
+# every argument quoted for the shell, so the line can be pasted back as it
+# stands from any directory, a path with a space included.
+ORIGINAL_ARGS=("$@")
+SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+rerun_command() {
+    local line
+    line="$(printf '%q ' "$SELF" ${ORIGINAL_ARGS[@]+"${ORIGINAL_ARGS[@]}"})"
+    printf '%s\n' "${line% }"
+}
 
 # The design table and the shared shell generator. Sourced before the arguments
 # are read, because --design= is checked against the table.
@@ -613,7 +623,7 @@ INSTALL_COMPLETED=1
     say "3.3.1p1 -> 3.3.1p2, re-run this script so the version gate is re-stamped."
     say "Skip it and the design silently reverts to 'default' at every login."
     say "Re-run it with the same flags:"
-    say "    $0 $ORIGINAL_ARGS"
+    say "    $(rerun_command)"
     for d in $DESIGNS; do
       case "$(design_field "$d" shell)" in
         generated)

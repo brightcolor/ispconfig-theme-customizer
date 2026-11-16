@@ -41,7 +41,8 @@ t_ok "first run installs this project's Cicada" $?
 t_eq "first run stamps the panel version" "$(cat "$themes/cicada/ispconfig_version" 2>/dev/null)" "3.3.1p1"
 grep -q -F "themes/cicada/brand.php" "$themes/cicada/templates/main.tpl.htm" 2>/dev/null
 t_ok "first run generates Cicada's shell" $?
-grep -q -F -- "$repo/install.sh $flags $root" "$work/run1.txt"
+rerun="$(printf '%q ' "$repo/install.sh" $flags "$root")"
+grep -q -F -- "${rerun% }" "$work/run1.txt"
 t_ok "the closing note gives the re-run command with the same flags" $?
 
 # ---- a re-run finds its own Cicada ------------------------------------------
@@ -68,6 +69,22 @@ for bad in "$root/interface/web/old-themes" "$themes/../old-themes"; do
   grep -q -F "outside the panel's web directory" "$work/run4.txt"
   t_ok "the refusal names the web directory ($bad)" $?
 done
+
+# ---- the re-run command can be pasted back as it stands ----------------------
+# Started by a relative path with an argument that holds a space: the closing
+# note names the script by its absolute path and quotes every argument, so the
+# line runs the same install from any directory.
+spaced="$work/old themes"
+( cd "$repo" && bash ./install.sh $flags "--backup-dir=$spaced" "$root" ) > "$work/run5.txt" 2>&1
+t_ok "a run by a relative path with a spaced argument exits 0" $? "$(tail -n 5 "$work/run5.txt")"
+hint="$(grep -A1 "Re-run it with the same flags:" "$work/run5.txt" | tail -n 1)"
+eval "set -- $hint"
+t_eq "the re-run command names the script by its absolute path" "${1:-}" "$repo/install.sh"
+t_eq "the re-run command gives back every argument" "$#" "7"
+t_eq "the re-run command keeps an argument with a space whole" "${6:-}" "--backup-dir=$spaced"
+# The note at an interrupted install prints the same command.
+t_eq "install.sh spells the re-run command in one place" \
+  "$(grep -c 'rerun_command' "$repo/install.sh")" "3"
 
 # ---- uninstall --------------------------------------------------------------
 bash "$repo/uninstall.sh" --theme --design=cicada "$root" > "$work/un.txt" 2>&1
