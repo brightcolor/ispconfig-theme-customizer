@@ -38,7 +38,10 @@
 #                        Removing a design that was never installed just prints
 #                        "already removed", so the wide default costs nothing —
 #                        whereas a narrow one would leave a stray design in the
-#                        panel's picker after "uninstall everything".
+#                        panel's picker after "uninstall everything". A design
+#                        directory another installer put there (one without
+#                        brand.php, such as the standalone ispconfig-cicada) is
+#                        left in place, and its users keep their design.
 #     --reset-users      with --theme: reset sys_user.app_theme rows pointing at
 #                        the removed design(s) -> 'default' (recommended; skip
 #                        only if reinstalling)
@@ -155,6 +158,26 @@ if [ ! -d "$ISPC_ROOT/interface/web" ]; then
   exit 1
 fi
 
+# --- foreign design directories stay ----------------------------------------
+# Every design this project installs carries brand.php. A real directory under
+# themes/ without one came from another installer (for cicada, typically the
+# standalone ispconfig-cicada): it is not this project's to remove, and its
+# users are not this project's to reset. Such a design leaves DESIGNS here, so
+# no later step touches it. install.sh's move_aside() applies the same rule.
+if [ -n "$WANT_THEME" ]; then
+  kept=""
+  for d in $DESIGNS; do
+    dir="$THEMES_DIR/$d"
+    if [ -d "$dir" ] && [ ! -L "$dir" ] && [ ! -f "$dir/brand.php" ]; then
+      say "  keeping $dir: another installer put it there, so it stays, and its"
+      say "  users keep their design."
+      continue
+    fi
+    kept="${kept:+$kept }$d"
+  done
+  DESIGNS="$kept"
+fi
+
 # --- 0. warn BEFORE destroying anything -------------------------------------
 # Checking first matters: once a design directory is gone, a panel still
 # configured for it serves a login page with every stylesheet and script
@@ -212,7 +235,9 @@ else
       echo "WARNING: purge failed — stored branding values are still in sys_ini." >&2
     }
   fi
-  if [ -n "$WANT_THEME" ] && [ "$RESET_USERS" = 1 ]; then
+  # With no design of this project left to remove, the reset is skipped: the
+  # helper treats an empty design list as "every design this project ships".
+  if [ -n "$WANT_THEME" ] && [ "$RESET_USERS" = 1 ] && [ -n "$DESIGNS" ]; then
     say "resetting users' theme choice:"
     # The design names are passed explicitly: this must reset exactly the designs
     # being removed, and nobody who uninstalls one design expects users of the
@@ -222,7 +247,7 @@ else
       echo "         see a 'theme not compatible' error at EVERY login. Fix the database" >&2
       echo "         and re-run: php bin/reset_app_theme.php $CONF $DESIGNS" >&2
     }
-  elif [ -n "$WANT_THEME" ]; then
+  elif [ -n "$WANT_THEME" ] && [ -n "$DESIGNS" ]; then
     say "  (skipped app_theme reset — pass --reset-users unless you are reinstalling)"
   fi
 fi

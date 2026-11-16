@@ -63,5 +63,23 @@ bash "$repo/uninstall.sh" --theme --design=cicada "$root" > "$work/un.txt" 2>&1
 [ ! -e "$themes/cicada" ]
 t_ok "uninstall removes cicada with its templates" $? "$(tail -n 5 "$work/un.txt")"
 
+# ---- uninstall leaves another installer's design alone ----------------------
+# A real themes/cicada without brand.php is not this project's: the plain
+# uninstall (every design by default) must keep it, and a user reset must not
+# fall back to resetting designs nobody asked to remove.
+root2="$work/ispconfig2"
+mkdir -p "$root2/interface/web/themes/cicada" "$root2/interface/lib" "$root2/server/lib"
+cp "$root/interface/lib/config.inc.php" "$root2/interface/lib/"
+cp "$root/server/lib/config.inc.php" "$root2/server/lib/"
+echo "standalone" > "$root2/interface/web/themes/cicada/marker.txt"
+bash "$repo/uninstall.sh" --theme "$root2" > "$work/un2.txt" 2>&1
+[ -f "$root2/interface/web/themes/cicada/marker.txt" ]
+t_ok "a plain uninstall keeps another installer's cicada" $? "$(tail -n 5 "$work/un2.txt")"
+grep -q "keeping $root2/interface/web/themes/cicada" "$work/un2.txt"
+t_ok "the uninstall says it kept it" $?
+bash "$repo/uninstall.sh" --theme --design=cicada --reset-users "$root2" > "$work/un3.txt" 2>&1
+! grep -q "resetting users' theme choice" "$work/un3.txt"
+t_ok "a reset with nothing left to remove resets nobody" $? "$(tail -n 5 "$work/un3.txt")"
+
 t_done
 echo "install test passed"

@@ -139,7 +139,7 @@ Read this before deploying on a public panel. ISPConfig's theme gate requires th
                [--purge-branding] [--keep-assignment] [ISPCONFIG_ROOT]
 ```
 
-Same component flags as the installer, but `--design` defaults to **all designs** rather than to clarity, because removal has to clear whatever might be on the panel. The other defaults are conservative: `--reset-users` clears `sys_user.app_theme` rows still pointing at a removed design (without it, affected users get a "theme not compatible" banner at every login), and `--purge-branding` wipes the stored branding values, which are otherwise left intact and editable under *System → Interface Config*. Nothing here edits ISPConfig configuration, so `$conf['theme']` is yours to revert; `uninstall.sh` warns before removing anything if it is still set to a design.
+Same component flags as the installer, but `--design` defaults to **all designs** rather than to clarity, because removal has to clear whatever might be on the panel. A design directory another installer put there, one without `brand.php` such as the standalone ispconfig-cicada, stays in place, and its users keep their design. The other defaults are conservative: `--reset-users` clears `sys_user.app_theme` rows still pointing at a removed design (without it, affected users get a "theme not compatible" banner at every login), and `--purge-branding` wipes the stored branding values, which are otherwise left intact and editable under *System → Interface Config*. Nothing here edits ISPConfig configuration, so `$conf['theme']` is yours to revert; `uninstall.sh` warns before removing anything if it is still set to a design.
 
 ## The brand-token contract
 
