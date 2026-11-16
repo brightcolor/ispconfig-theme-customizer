@@ -247,10 +247,17 @@ if (function_exists('brand_cic_accent_tokens')) {
     $css = render($path, array('accent_hex' => '#0065AB'));
     $r   = $root($css);
     $all = strpos($r, '--cic-accent: #0065AB;') !== false;
-    foreach (array('--cic-accent-text:', '--cic-accent-line:', '--cic-accent-deep:', '--cic-on-accent:') as $tok) {
+    foreach (array('--cic-accent-text:', '--cic-accent-line:', '--cic-accent-deep:', '--cic-on-accent:',
+                   '--cic-on-accent-text:') as $tok) {
         $all = $all && strpos($r, $tok) !== false;
     }
-    t_ok('cicada: accent emits the five tokens', $all, $css);
+    t_ok('cicada: accent emits the six tokens', $all, $css);
+    //* Under a dark accent the hover fill is a light blue: its label turns dark
+    //* while the label on the dark fill stays white.
+    $navy = $root(render($path, array('accent_hex' => '#003366')));
+    t_ok('cicada: a dark accent labels its light hover fill dark',
+        strpos($navy, '--cic-on-accent-text: #1C1C1C;') !== false && strpos($navy, '--cic-on-accent: #FFFFFF;') !== false,
+        $navy);
     t_ok('cicada: accent relabels .bg-primary',
         preg_match('/\.bg-primary \{ color: #(FFFFFF|1C1C1C); \}/', $css) === 1, $css);
     t_ok('cicada: accent tints the tap highlight',

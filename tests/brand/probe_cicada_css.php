@@ -81,4 +81,45 @@ t_ok('the login mark is a silhouette by default',
     && rule_has($rules, $head . ' > img', 'opacity: .82'));
 t_ok('#logo keeps its silhouette', rule_has($rules, '#logo', 'filter: brightness(0) invert(1)'));
 
+
+/* ---- every label sits on the fill its token is derived for -----------------
+ * brand.php derives --cic-on-accent from the stored accent. A rule that prints
+ * that label on another fill (the lighter hover fill, a status colour) inherits
+ * a label chosen for a different background: white on a light hover fill under
+ * a dark accent. Each fill family therefore has its own label token.
+ */
+function root_value($rules, $name) {
+    return preg_match('/' . preg_quote($name, '/') . ':\s*([^;]+);/', isset($rules[':root']) ? $rules[':root'] : '', $m)
+        ? trim($m[1]) : '';
+}
+t_eq(':root defines --cic-on-accent-text', root_value($rules, '--cic-on-accent-text'), '#1c1c1c');
+t_eq(':root defines --cic-on-status', root_value($rules, '--cic-on-status'), '#1c1c1c');
+
+$fills = array(
+    'var(--cic-accent)'      => 'var(--cic-on-accent)',
+    'var(--cic-accent-text)' => 'var(--cic-on-accent-text)',
+    'var(--cic-ok)'          => 'var(--cic-on-status)',
+    'var(--cic-ok-text)'     => 'var(--cic-on-status)',
+    'var(--cic-warn)'        => 'var(--cic-on-status)',
+    'var(--cic-warn-lift)'   => 'var(--cic-on-status)',
+);
+foreach (explode('}', $css) as $chunk) {
+    $at = strpos($chunk, '{');
+    if ($at === false) continue;
+    $decl = preg_replace('/\s+/', ' ', substr($chunk, $at + 1));
+    if (!preg_match('/color: (var\(--cic-on-[a-z-]+\))/', $decl, $label)) continue;
+    if (!preg_match('/background(?:-color)?: ([^;]+);/', $decl, $fill)) continue;
+    $fill = trim($fill[1]);
+    if (!isset($fills[$fill])) continue;
+    $sel = trim(preg_replace('/\s+/', ' ', substr($chunk, 0, $at)));
+    t_eq("$sel labels its $fill fill with " . $fills[$fill], $label[1], $fills[$fill]);
+}
+
+//* The status fills are fixed, so their dark label is checked once here.
+foreach (array('--cic-ok', '--cic-ok-text', '--cic-warn', '--cic-warn-lift') as $fill) {
+    $hex = root_value($rules, $fill);
+    $c = preg_match('/^#[0-9a-fA-F]{6}$/', $hex) ? h_contrast($hex, '#1C1C1C') : 0;
+    t_ok(sprintf('the status label reads on %s (%.2f:1)', $fill, $c), $c >= 4.5, $hex);
+}
+
 t_done();

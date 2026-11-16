@@ -253,7 +253,7 @@ $params = brand_cic_params();
 /* =========================================================================
  * accent — Cicada's accent properties, and its two accent uses outside them
  * =======================================================================*/
-// cicada.css draws every accent through these five properties, so assigning
+// cicada.css draws every accent through these six properties, so assigning
 // them recolours buttons, links, tabs, markers and focus rings at once. The fill
 // takes the stored colour exactly; whatever is printed on the dark surfaces is
 // walked from it until it reads (brand_cic_accent_tokens()).
@@ -265,6 +265,7 @@ if ($accent !== '') {
           . "  --cic-accent-line: {$tok['line']};\n"
           . "  --cic-accent-deep: {$tok['deep']};\n"
           . "  --cic-on-accent: {$tok['on']};\n"
+          . "  --cic-on-accent-text: {$tok['on_text']};\n"
           . "}\n";
     // Two uses the stylesheet writes as literals: .bg-primary prints white on
     // the fill whatever the fill is, and the tap highlight is Cicada's orange as
@@ -504,17 +505,21 @@ function brand_cic_ink($hex)
  * line    walked from it to line_min on the overlay (--cic-accent-line)
  * deep    deep_step lightness points darker (--cic-accent-deep)
  * on      the label to print on the fill (--cic-on-accent)
+ * on_text the label to print on a fill of the text value, the primary buttons'
+ *         hover and active states (--cic-on-accent-text)
  */
 function brand_cic_accent_tokens($accent)
 {
     $p = brand_cic_params();
     list(, , $l) = brand_hex_to_hsl($accent);
+    $text = brand_readable($accent, $l, $p['overlay'], $p['text_min']);
     return array(
         'accent' => $accent,
-        'text'   => brand_readable($accent, $l, $p['overlay'], $p['text_min']),
+        'text'   => $text,
         'line'   => brand_readable($accent, $l, $p['overlay'], $p['line_min']),
         'deep'   => brand_shade($accent, $l - $p['deep_step']),
         'on'     => brand_cic_ink($accent),
+        'on_text' => brand_cic_ink($text),
     );
 }
 

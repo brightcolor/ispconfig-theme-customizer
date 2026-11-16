@@ -53,6 +53,16 @@
 	   and the label goes dark instead of the fill going muddy. */
 	--cic-on-accent:   #1c1c1c;
 
+	/* The label on the fills painted with the accent's TEXT value: the hover
+	   and active states of the primary buttons. Under a dark brand accent
+	   that value is light, so its label is chosen separately. brand.php sets
+	   it; unbranded it matches --cic-on-accent. */
+	--cic-on-accent-text: #1c1c1c;
+
+	/* The label on the status fills (ok, warning). Those never follow the
+	   brand, so their label never does either. */
+	--cic-on-status:   #1c1c1c;
+
 	/* Status. Two values per hue where the same colour has to work both as
 	   a fill (dark label on top) and as text on the dark ground (needs to
 	   be lighter than the fill). --cic-bad is a shade deeper than Cicada's
@@ -932,13 +942,13 @@ fieldset[disabled] .btn {
 .btn-primary.active {
 	background-color: var(--cic-accent-text);
 	border-color: var(--cic-line);
-	color: var(--cic-on-accent);
+	color: var(--cic-on-accent-text);
 }
 
 .btn-success {
 	background-color: var(--cic-ok);
 	border-color: var(--cic-line);
-	color: var(--cic-on-accent);
+	color: var(--cic-on-status);
 }
 
 .btn-success:hover,
@@ -946,7 +956,7 @@ fieldset[disabled] .btn {
 .btn-success:active {
 	background-color: var(--cic-ok-text);
 	border-color: var(--cic-line);
-	color: var(--cic-on-accent);
+	color: var(--cic-on-status);
 }
 
 .btn-info {
@@ -966,7 +976,7 @@ fieldset[disabled] .btn {
 .btn-warning {
 	background-color: var(--cic-warn);
 	border-color: var(--cic-line);
-	color: var(--cic-on-accent);
+	color: var(--cic-on-status);
 }
 
 .btn-warning:hover,
@@ -974,7 +984,7 @@ fieldset[disabled] .btn {
 .btn-warning:active {
 	background-color: var(--cic-warn-lift);
 	border-color: var(--cic-line);
-	color: var(--cic-on-accent);
+	color: var(--cic-on-status);
 }
 
 .btn-danger {
@@ -1034,7 +1044,7 @@ fieldset[disabled] .btn {
 .formbutton-success.active {
 	background: var(--cic-accent-text);
 	border-bottom-color: var(--cic-line);
-	color: var(--cic-on-accent);
+	color: var(--cic-on-accent-text);
 }
 
 .formbutton-danger {
@@ -1248,7 +1258,7 @@ button.list-group-item {
 .label-primary { background-color: var(--cic-accent); color: var(--cic-on-accent); }
 .label-success { background-color: var(--cic-ok-deep); color: #fff; }
 .label-info    { background-color: var(--cic-raised); border: 1px solid var(--cic-line); color: var(--cic-text); }
-.label-warning { background-color: var(--cic-warn); color: var(--cic-on-accent); }
+.label-warning { background-color: var(--cic-warn); color: var(--cic-on-status); }
 .label-danger  { background-color: var(--cic-bad); color: #fff; }
 
 /* A state reads as a chip: short, upright, spaced, the same size wherever

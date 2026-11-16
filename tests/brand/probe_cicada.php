@@ -102,6 +102,12 @@ foreach (h_accents() as $hex) {
     t_ok(sprintf('%s: deep is 11 points darker (L %.1f from %.1f)', $hex, $ld, $l),
         abs($ld - max(0.0, $l - 11)) <= 0.5, $t['deep']);
 
+    $other = ($t['on_text'] === '#FFFFFF') ? '#1C1C1C' : '#FFFFFF';
+    t_ok("$hex: the label on the text-coloured fill is the better of the two inks",
+        in_array($t['on_text'], array('#FFFFFF', '#1C1C1C'), true)
+            && h_contrast($t['on_text'], $t['text']) >= h_contrast($other, $t['text']),
+        $t['on_text']);
+
     $other = ($t['on'] === '#FFFFFF') ? '#1C1C1C' : '#FFFFFF';
     t_ok("$hex: the label is the better of the two inks",
         in_array($t['on'], array('#FFFFFF', '#1C1C1C'), true) && h_contrast($t['on'], $hex) >= h_contrast($other, $hex),
