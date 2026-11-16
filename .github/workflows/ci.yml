@@ -290,6 +290,12 @@ jobs:
             echo "::warning::mawk is not installed on this runner; the shell suite ran with the default awk only"
           fi
 
+      - name: Install test (install.sh and uninstall.sh against a scratch panel)
+        # A foreign design directory is moved aside, a re-run moves nothing, a
+        # backup directory inside themes/ is refused, uninstall removes the
+        # design with its generated templates.
+        run: bash tests/shell/install_test.sh
+
       - name: Chart script (Cicada's chart defaults follow the stored accent)
         run: node tests/js/cicada-charts.test.js
 

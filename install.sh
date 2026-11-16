@@ -17,11 +17,14 @@
 # lived in separate repositories with independent versions, and nothing
 # enforced that they matched, so an accent colour could silently fail to apply.
 #
-# Two designs read that contract, and you choose with --design:
+# Three designs read that contract, and you choose with --design:
 #   clarity (default) — a ground-up dark (and light) interface.
 #   classic           — the stock ISPConfig look, made brandable. Ships two
 #                       templates and no assets of its own; everything else
 #                       comes from the panel's own default theme.
+#   cicada            — a dark onyx skin after the Cicada theme for OPNsense.
+#                       Its shell is generated like classic's; its stylesheet
+#                       and chart defaults ship in themes/cicada/assets/.
 #
 # You can still install one half on its own. With --module you get just the
 # Branding page: logo, panel name and the per-role news feeds are read by
@@ -33,17 +36,20 @@
 #
 # Usage:
 #   ./install.sh [--theme|--module|--all] [--design=<name>] [--copy]
-#                [--no-assign] [ISPCONFIG_ROOT]
+#                [--no-assign] [--backup-dir=<path>] [ISPCONFIG_ROOT]
 #
 #     --theme       install only the design(s)
 #     --module      install only the Branding page
 #     --all         install both — the default when no flag is given
-#     --design=<n>  which design: clarity (the default), classic, or all.
+#     --design=<n>  which design: clarity (the default), classic, cicada, or all.
 #                   Repeatable, so --design=clarity --design=classic is the same
 #                   as --design=all.
 #     --copy        copy instead of symlinking (use for packaged installs)
 #     --no-assign   do not grant admin users access to the Branding page; do it
 #                   by hand in System > CP Users > edit the admin user > Modules
+#     --backup-dir=<path>  where a design directory another installer left in
+#                   themes/ is moved before this one takes its place. Default
+#                   ISPCONFIG_ROOT/theme-backups; it must lie outside themes/.
 #     ISPCONFIG_ROOT defaults to /usr/local/ispconfig
 #
 # --design is deliberately a SEPARATE axis from --theme/--module/--all rather
@@ -164,6 +170,7 @@ WANT_MODULE=""
 DESIGNS=""              # empty until --design is seen; defaults to clarity below
 DESIGN_EXPLICIT=0       # 1 once --design is given, so an ignored one can be reported
 SHELL_TPL_TMP=""        # scratch dir for generated templates (see on_exit)
+BACKUP_DIR=""           # empty until --backup-dir; defaults under ISPC_ROOT below
 
 # Add a design to the list unless it is already there — --design=all followed by
 # --design=classic must not deploy classic twice.
@@ -196,6 +203,8 @@ for arg in "$@"; do
     # Caught explicitly so the value-less form gets a useful message instead of
     # the catch-all's "unknown option: --design".
     --design)    echo "ERROR: --design needs a value, e.g. --design=classic" >&2; exit 2 ;;
+    --backup-dir=*) BACKUP_DIR="${arg#--backup-dir=}" ;;
+    --backup-dir)   echo "ERROR: --backup-dir needs a value, e.g. --backup-dir=/var/backups/ispconfig-themes" >&2; exit 2 ;;
     --copy)      MODE="copy" ;;
     --no-assign) ASSIGN=0 ;;
     # grep -v '^#!' so the shebang does not print as a stray "!/usr/bin/env bash"
@@ -227,6 +236,24 @@ WEB_DIR="$ISPC_ROOT/interface/web"
 THEMES_DIR="$WEB_DIR/themes"
 CONF="$ISPC_ROOT/interface/lib/config.inc.php"
 SERVER_CONF="$ISPC_ROOT/server/lib/config.inc.php"
+
+# Where a design directory another installer left in themes/ goes before this
+# one takes its place (move_aside). ISPConfig offers every directory under
+# themes/ in its Design picker, a moved one included, so a backup directory
+# there would put the old design back on offer. Refused before anything is
+# touched.
+BACKUP_DIR="${BACKUP_DIR:-$ISPC_ROOT/theme-backups}"
+backup_abs="$(realpath -m -- "$BACKUP_DIR" 2>/dev/null || printf '%s' "$BACKUP_DIR")"
+themes_abs="$(realpath -m -- "$THEMES_DIR" 2>/dev/null || printf '%s' "$THEMES_DIR")"
+case "$backup_abs/" in
+  "$themes_abs"/*)
+    echo "ERROR: --backup-dir must lie outside $THEMES_DIR." >&2
+    echo "       ISPConfig offers every directory there in its Design picker, so a" >&2
+    echo "       design moved there would stay selectable. Choose a directory such as" >&2
+    echo "       $ISPC_ROOT/theme-backups." >&2
+    exit 2
+    ;;
+esac
 
 say "ispconfig-theme-customizer installer"
 say "  source     : $ROOT"
@@ -304,6 +331,26 @@ check_traversable() {
     fi
     p="$(dirname "$p")"
   done
+}
+
+# Move a design directory this project did not install out of the way before
+# deploy() replaces it. Every design this project installs carries brand.php,
+# so a real directory without one came from another installer — for cicada,
+# typically the standalone ispconfig-cicada — and deploy() would otherwise
+# delete it. It goes to $BACKUP_DIR, outside themes/, intact.
+# $1 = destination dir, $2 = design name
+move_aside() {
+  local dest="$1" name="$2" target
+  if [ ! -d "$dest" ] || [ -L "$dest" ] || [ -f "$dest/brand.php" ]; then
+    return 0
+  fi
+  target="$BACKUP_DIR/$name-$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$BACKUP_DIR"
+  mv "$dest" "$target"
+  say "  moved $dest, which another installer put there, to"
+  say "  $target"
+  say "  NOTE: leave that other installer unused on this panel from now on; run"
+  say "        again, it would replace this design with its own."
 }
 
 # $1 = source dir, $2 = destination dir, $3 = parent of source (tar -C), $4 = basename
@@ -389,6 +436,7 @@ if [ -n "$WANT_THEME" ]; then
       fi
     fi
 
+    move_aside "$DEST" "$THEME_NAME"
     deploy "$SRC" "$DEST" "$ROOT/themes" "$THEME_NAME"
 
     if [ "$(design_field "$THEME_NAME" shell)" = "generated" ]; then
@@ -562,6 +610,8 @@ INSTALL_COMPLETED=1
     say "IMPORTANT — after ANY ISPConfig upgrade, including patch releases such as"
     say "3.3.1p1 -> 3.3.1p2, re-run this script so the version gate is re-stamped."
     say "Skip it and the design silently reverts to 'default' at every login."
+    say "Re-run it with the same flags:"
+    say "    $0 $ORIGINAL_ARGS"
     for d in $DESIGNS; do
       case "$(design_field "$d" shell)" in
         generated)
