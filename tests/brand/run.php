@@ -28,6 +28,7 @@ $probes = array(
     'clarity' => __DIR__ . '/probe_clarity.php',
     'classic' => __DIR__ . '/probe_classic.php',
     'module'  => __DIR__ . '/probe_module.php',
+    'cicada'  => __DIR__ . '/probe_cicada.php',
 );
 
 // The render probes execute each design's endpoint BODY — the part that decides

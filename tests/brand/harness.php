@@ -164,6 +164,17 @@ function h_rails() {
                  '#FAFAFA', '#F5F5F5', '#F8F8F8');
 }
 
+/**
+ * The accents Cicada's derivations are run against: greys from black to white,
+ * the primaries and secondaries, a near-white and a near-black, a dark brand
+ * navy, and Cicada's own orange.
+ */
+function h_accents() {
+    return array('#000000', '#333333', '#777777', '#BBBBBB', '#FFFFFF',
+                 '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#00FFFF', '#FF00FF',
+                 '#FFF8E1', '#0A0A0A', '#003366', '#dd630d');
+}
+
 /** The (stored, bg_hex, default) grid every copy of the resolver must agree on. */
 function h_variant_matrix() {
     $stored   = array('', 'on_light', 'on_dark', 'ON_DARK', 'garbage', '0', 'on_dark ');
