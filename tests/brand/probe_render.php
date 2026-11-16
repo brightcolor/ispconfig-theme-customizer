@@ -308,6 +308,19 @@ if (function_exists('brand_cic_accent_tokens')) {
     $css = render($path, array(), '', 'Acme "Hosting" \\ Co', '');
     t_ok('cicada: wordmark is escaped', strpos($css, 'content: "Acme \\"Hosting\\" \\\\ Co"') !== false, $css);
     t_ok('cicada: wordmark sheet stays balanced', css_balanced($css), $css);
+
+    //* On the login card the header prints the name: a browser replaces an
+    //* element's content with url() only, so a string on the <img> is ignored
+    //* and the stock logo would stay, in colour once its filter is lifted.
+    $css = render($path, array(), '', 'Acme "Hosting" \\ Co', 'login');
+    t_ok('cicada: the login wordmark hides the stock logo',
+        strpos($css, $login_mark . ' { display: none; }') !== false, $css);
+    t_ok('cicada: the login wordmark is printed by the card header',
+        strpos($css, '.panel-heading[style*="linear-gradient"]::after { content: "Acme \\"Hosting\\" \\\\ Co"') !== false, $css);
+    t_ok('cicada: the login wordmark puts no string on the image',
+        strpos($css, '> img { content: "') === false, $css);
+    t_ok('cicada: the login wordmark lifts no filter', strpos($css, 'filter') === false, $css);
+    t_ok('cicada: the login wordmark sheet stays balanced', css_balanced($css), $css);
 }
 
 /* ---- the design-picker rule is one string, not two -----------------------
