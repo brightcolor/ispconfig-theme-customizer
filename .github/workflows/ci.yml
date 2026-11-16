@@ -290,6 +290,9 @@ jobs:
             echo "::warning::mawk is not installed on this runner; the shell suite ran with the default awk only"
           fi
 
+      - name: Chart script (Cicada's chart defaults follow the stored accent)
+        run: node tests/js/cicada-charts.test.js
+
       - name: Installers reject unknown flags
         # a typo'd flag was once silently consumed as ISPCONFIG_ROOT, exiting 0
         # having skipped the work it was asked to do

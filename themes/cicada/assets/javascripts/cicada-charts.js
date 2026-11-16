@@ -19,11 +19,35 @@
 	}
 
 	/* Kept in sync with cicada.css by hand — Chart.js draws onto a canvas and
-	   cannot read CSS custom properties. */
+	   cannot read CSS custom properties, so every colour it gets is a plain
+	   value. The accent is the exception: brand.php reassigns it when the
+	   operator stores one, so it is read from the computed style once per chart
+	   (Chart.js loads in the body, after every stylesheet), and these two are
+	   its shipped values. */
 	var TEXT = '#bac3ca';           /* --cic-text      */
 	var GRID = 'rgba(186, 195, 202, .14)';
-	var ACCENT = '#ef7d21';         /* --cic-accent-text */
+	var ACCENT = '#ef7d21';         /* --cic-accent-text, as shipped */
 	var ACCENT_FILL = 'rgba(239, 125, 33, .18)';
+
+	/* The accent text colour this page really has: brand.php's when an accent
+	   is stored, cicada.css's otherwise. Anything but #rrggbb falls back. */
+	function readAccent() {
+		if (typeof getComputedStyle !== 'function' || !document.documentElement) {
+			return ACCENT;
+		}
+		var value = String(getComputedStyle(document.documentElement)
+			.getPropertyValue('--cic-accent-text') || '').trim();
+		return /^#[0-9a-f]{6}$/i.test(value) ? value : ACCENT;
+	}
+
+	/* That accent as the area under the line, at the shipped 18 % opacity. */
+	function accentFill(hex) {
+		if (hex.toLowerCase() === ACCENT) {
+			return ACCENT_FILL;
+		}
+		return 'rgba(' + parseInt(hex.substr(1, 2), 16) + ', ' + parseInt(hex.substr(3, 2), 16)
+			+ ', ' + parseInt(hex.substr(5, 2), 16) + ', .18)';
+	}
 
 	/* The colour the dashlet hard-codes for every line. Only datasets still
 	   carrying it get recoloured, so a chart that sets its own colour on
@@ -66,14 +90,17 @@
 			}
 			conf._cicadaDone = true;
 
+			var accent = readAccent();
+			var fill = accentFill(accent);
+
 			var sets = conf.data && conf.data.datasets;
 			if (sets) {
 				sets.forEach(function (set) {
 					if (set.borderColor === DASHLET_LINE) {
-						set.borderColor = ACCENT;
+						set.borderColor = accent;
 					}
 					if (set.backgroundColor === DASHLET_FILL) {
-						set.backgroundColor = ACCENT_FILL;
+						set.backgroundColor = fill;
 					}
 				});
 			}
