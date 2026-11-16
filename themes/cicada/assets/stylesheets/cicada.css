@@ -41,6 +41,13 @@
 	--cic-accent-text: #ef7d21;
 	--cic-accent-deep: #a84c0b;
 
+	/* Accent drawn as a line or a glyph: active markers, module icons,
+	   focus and selection borders. A fill brings its own label colour, a
+	   line has only the ground behind it, so a dark brand accent that
+	   works on a button would vanish as a border. brand.php lifts this one
+	   to 3:1 against --cic-overlay; unbranded it is the accent itself. */
+	--cic-accent-line: var(--cic-accent);
+
 	/* Type that sits ON a bright fill. White over #dd630d measures 3.6:1,
 	   under the 4.5:1 AA floor - so the fill keeps Cicada's colour exactly
 	   and the label goes dark instead of the fill going muddy. */
@@ -266,7 +273,7 @@ span.notification_text {
 
 #main-navigation a.active {
 	background: var(--cic-raised);
-	border-bottom-color: var(--cic-accent);
+	border-bottom-color: var(--cic-accent-line);
 	color: var(--cic-accent-text);
 }
 
@@ -296,7 +303,7 @@ span.notification_text {
 
 .modules .icon,
 .modules .bi-icon {
-	color: var(--cic-accent);
+	color: var(--cic-accent-line);
 }
 
 .modules .button {
@@ -310,7 +317,7 @@ span.notification_text {
 .modules .button:hover,
 .modules .button.active {
 	background: var(--cic-hover);
-	border-bottom-color: var(--cic-accent);
+	border-bottom-color: var(--cic-accent-line);
 	color: var(--cic-accent-text);
 }
 
@@ -760,7 +767,7 @@ input[type="search"]:focus,
 input[type="tel"]:focus,
 input[type="color"]:focus {
 	background-color: var(--cic-sunken);
-	border-color: var(--cic-accent);
+	border-color: var(--cic-accent-line);
 	color: var(--cic-text-loud);
 	box-shadow: none;
 	outline: 0;
@@ -1011,7 +1018,7 @@ fieldset[disabled] .btn {
 .formbutton-default:hover,
 .formbutton-default.active {
 	background: var(--cic-hover);
-	border-bottom-color: var(--cic-accent);
+	border-bottom-color: var(--cic-accent-line);
 	color: var(--cic-accent-text);
 }
 
@@ -1652,7 +1659,7 @@ a.list-group-item:focus {
 .select2-container-active .select2-choice,
 .select2-container-active .select2-choices,
 .select2-container-multi.select2-container-active .select2-choices {
-	border-color: var(--cic-accent);
+	border-color: var(--cic-accent-line);
 	box-shadow: none;
 }
 
@@ -1754,7 +1761,7 @@ a.list-group-item:focus {
 .select2-dropdown-open.select2-drop-above .select2-choices {
 	background-color: var(--cic-raised);
 	background-image: none;
-	border-color: var(--cic-accent);
+	border-color: var(--cic-accent-line);
 	box-shadow: none;
 }
 
@@ -1864,7 +1871,7 @@ html[dir="rtl"] .select2-search input {
 .datetimepicker table tr td.today:hover.active {
 	background-color: var(--cic-head);
 	background-image: none;
-	border-color: var(--cic-accent);
+	border-color: var(--cic-accent-line);
 	color: var(--cic-accent-text);
 }
 
@@ -2002,6 +2009,24 @@ body.login,
 
 #pageForm .panel {
 	background-color: var(--cic-surface);
+}
+
+/* Stock 3.3 paints the login card header inline, in main_login.tpl.htm:
+   <div class="panel-heading" style="background: linear-gradient(to bottom,
+   white, #eef0f2); ...">. The .panel-heading rule in section 10 sets
+   background-color only, and the inline gradient is a background-image,
+   which stays on top: a white bar with a full-colour logo inside a dark
+   card. The attribute selector matches exactly that header. */
+.panel-heading[style*="linear-gradient"] {
+	background-image: none !important;
+}
+
+/* The login logo is an <img> made for a light ground, like #logo in the
+   header, and gets the same white silhouette. brand.php lifts the filter
+   when the operator stores a dark-background logo. */
+.panel-heading[style*="linear-gradient"] > img {
+	filter: brightness(0) invert(1);
+	opacity: .82;
 }
 
 /* ==========================================================================
