@@ -51,8 +51,8 @@ does, with one deliberate exception: the login card header (§6.6).
 
 | Path in the fork | Source |
 |---|---|
-| `themes/cicada/assets/stylesheets/cicada.css` | standalone v0.4.2, plus the login rules of §6.5 and §6.6 |
-| `themes/cicada/assets/javascripts/cicada-charts.js` | standalone v0.4.2, unchanged |
+| `themes/cicada/assets/stylesheets/cicada.css` | standalone v0.4.2, plus the line token of §6.2 and the login rules of §6.5 and §6.6 |
+| `themes/cicada/assets/javascripts/cicada-charts.js` | standalone v0.4.2, reading its accent from the stylesheet (§6.2) |
 | `themes/cicada/brand.php`, `title.php`, `favicon.php` | new, modelled on classic's |
 | `themes/cicada/README.md`, `themes/cicada/LICENSE` | new; LICENSE taken from the standalone repository |
 
@@ -165,14 +165,22 @@ through them.
 | Property | Value |
 |---|---|
 | `--cic-accent` | the stored colour |
-| `--cic-accent-text` | `brand_readable()` from the stored colour until it reaches 4.5:1 on every surface on which `cicada.css` prints `--cic-accent-text`; that surface list is read from the stylesheet once and pinned in a test |
+| `--cic-accent-text` | `brand_readable()` from the stored colour until it reaches 4.5:1 on `--cic-overlay` (`#383838`), the lightest of the six surfaces Cicada prints it on; the other five (`#1C1C1C`, `#202020`, `#222222`, `#292929`, `#2D2D2D`) are darker, so it holds there too |
+| `--cic-accent-line` | new token for the accent drawn as a line or glyph (active markers, module icons, focus and selection borders: eight places in `cicada.css`); `brand_readable()` from the stored colour until it reaches 3:1 on `#383838`. Its default in `cicada.css` is `var(--cic-accent)`, so an unbranded panel draws what it draws today |
 | `--cic-accent-deep` | the stored colour 11 HSL lightness points darker, the step between Cicada's own `#dd630d` and `#a84c0b` |
 | `--cic-on-accent` | `#FFFFFF` or `#1C1C1C`, whichever measures the higher contrast on the stored colour |
 
-Cicada's hand-tuned `#ef7d21` also shifts the hue by about two degrees, which a
-hue-preserving walk cannot reproduce. For `#dd630d` the requirement is therefore
-4.5:1 on the pinned surfaces and an HSL lightness within 4 points of
-`#ef7d21`. An unset `accent_hex` keeps the hand-tuned values.
+Each walk stops at the first 2-point step that reaches its target, so a derived
+colour stays as close to the stored one as the ratio allows. Cicada's hand-tuned
+`#ef7d21` reaches 4.25:1 on `#383838` and shifts the hue by about two degrees;
+an unset `accent_hex` keeps the hand-tuned values.
+
+Three accent uses sit outside the custom properties and follow a stored accent
+too. `brand.php` gives `.bg-primary` the `--cic-on-accent` label colour (the
+stylesheet hard-codes white there) and gives the tap highlight on `html, body`
+the accent at 30 % opacity. `cicada-charts.js` reads `--cic-accent-text` from the
+document when a chart is built and falls back to its shipped `#ef7d21` when the
+property is empty; Chart.js loads in the body, after every stylesheet.
 
 ### 6.3 `rail_hex`
 
@@ -253,9 +261,11 @@ Cicada's entry:
 | nav | `on_dark` | none | `#1C1C1C` | silhouette |
 | login | `on_dark` | none | `#202020` | silhouette |
 
-The last column is new to the table; clarity and classic carry `as supplied`.
-When the preview shows a light-background mark on a Cicada surface it applies the
-same filter as the panel.
+The last column is new: a slot may declare `'light_mark' => 'silhouette'`, and
+every surface entry built from that slot carries the same key last. clarity and
+classic declare nothing, so their entries keep their current shape. Wherever the
+preview shows a light-background mark on such a surface, in the server-rendered
+swatches and in the live panes, it applies the same filter as the panel.
 
 New UI strings go into all seven `*_customizer.lng` files; CI's
 `lang_check.php` enforces this.
@@ -267,8 +277,14 @@ New UI strings go into all seven `*_customizer.lng` files; CI's
 - `run.php` gains `render:cicada`.
 - Accent probe over a grid of colours (greys from black to white, the primaries
   and secondaries, very light and very dark values, `#dd630d`):
-  `--cic-accent-text` reaches 4.5:1 on every pinned surface; `--cic-on-accent`
-  is the higher-contrast ink of the two.
+  `--cic-accent-text` reaches 4.5:1 on each of the six surfaces, and the step
+  before it misses that on `#383838`; `--cic-accent-line` reaches 3:1 on
+  `#383838`; `--cic-on-accent` is the higher-contrast ink of the two.
+- Stylesheet probe: `--cic-accent-line` is defined as `var(--cic-accent)` and
+  drawn at the eight places; the login rules of §6.5 and §6.6 are present.
+- `tests/js/cicada-charts.test.js` (Node, no dependencies): with a stubbed
+  Chart.js and document, the dashlet's teal line takes the colour of
+  `--cic-accent-text`, and the shipped colour when the property is empty.
 - Logo probe: a light mark on either Cicada surface is drawn as a silhouette and
   a dark mark as supplied, in `brand.php` and in the preview alike.
 - Registry parity: `lib/designs.sh`, the keys of `customizer_design_chrome()` and
@@ -294,6 +310,8 @@ next to the standalone's.
   and states that the other installer must stay unused from now on. The target
   directory is a flag, `--backup-dir=`, with that default.
 - The closing output names the re-run command with the flags just used.
+- `uninstall.sh` reads the same design table and removes Cicada's generated
+  templates and stamps the way it removes classic's.
 
 ## 10. Documentation
 
@@ -304,6 +322,8 @@ next to the standalone's.
   pointer to the standalone repository for 3.2.
 - `UPGRADING.md`: Cicada is regenerated by the same re-run as classic.
 - `DESIGN.md` stays clarity's document.
+- `contrib/webserver/`: the deny rules also cover `LICENSE`, which ships inside
+  `themes/cicada/`.
 
 ## 11. Versioning
 
@@ -332,3 +352,4 @@ and the names stay distinct from every upstream tag, so
 | A third-party module styled through `--cic-*` breaks | names unchanged (§6.1) |
 | The login header rule matches more than the login card | attribute selector on the inline gradient; visual pass |
 | Replacing a foreign theme directory loses it | moved aside to the backup directory (§9) |
+| A dark accent hides active markers on Cicada's dark ground | `--cic-accent-line` walked to 3:1 (§6.2) |
