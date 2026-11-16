@@ -252,7 +252,18 @@ jobs:
       - name: Shell syntax
         run: |
           set -e
-          for f in install.sh uninstall.sh; do bash -n "$f"; done
+          # A glob that matches nothing stays literal; skip it rather than fail
+          # on a directory a branch has not added yet.
+          for f in install.sh uninstall.sh lib/*.sh tests/shell/*.sh; do
+            [ -e "$f" ] || continue
+            bash -n "$f"
+          done
+
+      - name: Shell suite (shared generator against stock ISPConfig templates)
+        # classic's generated shell must stay byte-identical to what upstream
+        # produced before the generator moved into lib/shell.sh, and every other
+        # generated design is checked against the same stock fixtures.
+        run: bash tests/shell/run.sh
 
       - name: Installers reject unknown flags
         # a typo'd flag was once silently consumed as ISPCONFIG_ROOT, exiting 0
