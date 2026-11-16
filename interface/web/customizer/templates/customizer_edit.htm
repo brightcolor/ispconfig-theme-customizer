@@ -1460,10 +1460,17 @@
   // resolution is; the src is read back out of the DOM rather than carried
   // separately so there is exactly one copy of it on the page, and it cannot
   // disagree with the swatch the operator is looking at.
-  function navMarkSrc(entry) {
-    if (!entry || !entry.variant) return '';
+  // The server-rendered swatch for an entry's variant. It already shows the
+  // mark that surface gets and the way the panel draws it, so the panes copy
+  // both from it rather than deciding a second time.
+  function navMarkImg(entry) {
+    if (!entry || !entry.variant) return null;
     var row = document.getElementById(entry.variant === 'on_dark' ? 'used_logo_on_dark' : 'used_logo');
-    var img = row ? row.querySelector('img') : null;
+    return row ? row.querySelector('img') : null;
+  }
+
+  function navMarkSrc(entry) {
+    var img = navMarkImg(entry);
     return img ? (img.getAttribute('src') || '') : '';
   }
 
@@ -1493,6 +1500,11 @@
     // Only on a real change, so a keystroke elsewhere does not make every
     // refresh re-fetch (or re-decode) the same image.
     if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    // ...and drawn the same way: Cicada flattens a light-background mark to
+    // a white silhouette, and the swatch this mark comes from already does.
+    var from = navMarkImg(entry);
+    img.style.filter = from ? from.style.filter : '';
+    img.style.opacity = from ? from.style.opacity : '';
     if (name) name.hidden = true;
   }
 

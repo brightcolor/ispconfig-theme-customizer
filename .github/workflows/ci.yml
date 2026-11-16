@@ -249,10 +249,60 @@ jobs:
           fi
           echo "classic is template- and asset-free as designed"
 
+      - name: cicada ships its assets and endpoints only
+        # Cicada's two shell templates are generated at install time like
+        # classic's, so a committed templates/ directory would pin one panel's
+        # markup. Everything it does ship is named here.
+        run: |
+          set -e
+          unexpected="$(find themes/cicada -type f \
+            ! -path 'themes/cicada/brand.php' ! -path 'themes/cicada/title.php' \
+            ! -path 'themes/cicada/favicon.php' ! -path 'themes/cicada/README.md' \
+            ! -path 'themes/cicada/LICENSE' \
+            ! -path 'themes/cicada/assets/stylesheets/cicada.css' \
+            ! -path 'themes/cicada/assets/javascripts/cicada-charts.js')"
+          if [ -n "$unexpected" ]; then
+            echo "::error::themes/cicada must contain only brand.php, title.php, favicon.php, README.md, LICENSE, cicada.css and cicada-charts.js:"
+            echo "$unexpected"
+            exit 1
+          fi
+          echo "cicada ships its assets and endpoints only"
+
       - name: Shell syntax
         run: |
           set -e
-          for f in install.sh uninstall.sh; do bash -n "$f"; done
+          # A glob that matches nothing stays literal; skip it rather than fail
+          # on a directory a branch has not added yet.
+          for f in install.sh uninstall.sh lib/*.sh tests/shell/*.sh; do
+            [ -e "$f" ] || continue
+            bash -n "$f"
+          done
+
+      - name: Shell suite (shared generator against stock ISPConfig templates)
+        # classic's generated shell must stay byte-identical to what upstream
+        # produced before the generator moved into lib/shell.sh, and every other
+        # generated design is checked against the same stock fixtures.
+        run: |
+          set -e
+          bash tests/shell/run.sh
+          # Panels run Debian's and Ubuntu's default awk, mawk. Run the suite
+          # with it as well, so a gawk-only construct cannot reach a panel.
+          if command -v mawk >/dev/null 2>&1; then
+            mkdir -p "$RUNNER_TEMP/mawk-bin"
+            ln -sf "$(command -v mawk)" "$RUNNER_TEMP/mawk-bin/awk"
+            PATH="$RUNNER_TEMP/mawk-bin:$PATH" bash tests/shell/run.sh
+          else
+            echo "::warning::mawk is not installed on this runner; the shell suite ran with the default awk only"
+          fi
+
+      - name: Install test (install.sh and uninstall.sh against a scratch panel)
+        # A foreign design directory is moved aside, a re-run moves nothing, a
+        # backup directory inside themes/ is refused, uninstall removes the
+        # design with its generated templates.
+        run: bash tests/shell/install_test.sh
+
+      - name: Chart script (Cicada's chart defaults follow the stored accent)
+        run: node tests/js/cicada-charts.test.js
 
       - name: Installers reject unknown flags
         # a typo'd flag was once silently consumed as ISPCONFIG_ROOT, exiting 0

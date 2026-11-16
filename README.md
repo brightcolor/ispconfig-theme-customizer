@@ -1,6 +1,6 @@
 # ISPConfig Theme Customizer
 
-An extension for the [ISPConfig](https://www.ispconfig.org/) control panel that makes the panel brandable. It replaces the panel's front end with one of two designs and adds an admin-only **Branding** page where you set the logo, panel name, accent colour and login details, instead of editing files by hand. The two designs are `clarity`, a dark and light interface built on VMware Clarity's design tokens, and `classic`, the stock ISPConfig look with the same branding applied; both read the same settings, so the Branding page drives either one. Everything it installs is additive — a theme directory under `interface/web/themes/` and a module directory under `interface/web/customizer/`. No ISPConfig core file is modified and no database schema is added. Install is `git clone` and `./install.sh`; re-run the installer after every ISPConfig release, including patch releases.
+An extension for the [ISPConfig](https://www.ispconfig.org/) control panel that makes the panel brandable. It replaces the panel's front end with one of three designs and adds an admin-only **Branding** page where you set the logo, panel name, accent colour and login details, instead of editing files by hand. The three designs are `clarity`, a dark and light interface built on VMware Clarity's design tokens, `classic`, the stock ISPConfig look with the same branding applied, and `cicada`, a dark onyx skin after the Cicada theme for OPNsense; all three read the same settings, so the Branding page drives each one. Everything it installs is additive — a theme directory under `interface/web/themes/` and a module directory under `interface/web/customizer/`. No ISPConfig core file is modified and no database schema is added. Install is `git clone` and `./install.sh`; re-run the installer after every ISPConfig release, including patch releases.
 
 ![Dashboard](mockup/shots/dark-dashboard-desktop.png)
 
@@ -17,7 +17,7 @@ The DNS and Client Limits screenshots are Firefox renders of the shipped templat
 
 Those are the clarity design; `mockup/shots/default-desktop.png` is the stock panel for comparison, which is the shape classic keeps.
 
-## The two designs
+## The three designs
 
 They are alternatives, not layers: pick one with `--design`, or install both and let each user choose in the Design picker under *Tools → User Settings*.
 
@@ -34,6 +34,12 @@ It overrides **seven templates** and nothing else: three shell templates (`main.
 Stock layout and stock stylesheets, with the logo, panel name, accent colour, navigation band and login background applied on top. It has no CSS, fonts or images of its own; every asset is served from `themes/default/assets/`.
 
 Its two shell templates (`main.tpl.htm`, `main_login.tpl.htm`) are **generated at install time** from the target panel's own `themes/default/templates/`, which is why there is no `templates/` directory under `themes/classic/` in the repository. `install.sh` applies four mechanical changes — pin asset paths to `themes/default/assets/`, link `brand.php`, `title.php` and `favicon.php` before `</head>`, replace stock's icon links with the `favicon.php` one, and split the stock footer credit into two addressable spans — and aborts rather than deploy a template it cannot account for. The installer run already required after a panel upgrade regenerates the shell from the new stock markup, so there is nothing to diff by hand. Details in [`themes/classic/README.md`](themes/classic/README.md).
+
+### cicada — dark onyx
+
+A dark skin after the Cicada theme for OPNsense, ported from the standalone [ispconfig-cicada](https://github.com/brightcolor/ispconfig-cicada). Its stylesheet draws every colour through `--cic-*` custom properties, so the Branding page recolours it by reassigning them: the accent as entered for fills, with text and lines derived until they read on Cicada's dark surfaces. A light-background logo is drawn as a white silhouette; a dark-background variant from the Branding page shows as supplied.
+
+Its shell is generated at install time like classic's, with four changes of its own: the stock colour sheet dropped, stock's red swapped for Cicada's orange, `cicada.css` linked directly before `brand.php`, and its chart defaults loaded after Chart.js. Details in [`themes/cicada/README.md`](themes/cicada/README.md).
 
 ## The Branding page
 
@@ -83,20 +89,21 @@ ISPConfig's *System → Extension Installer* lists only what is in [repo.ispconf
 
 ```bash
 cd /opt
-git clone https://github.com/wadejbeckett/ispconfig-theme-customizer.git
+git clone https://github.com/brightcolor/ispconfig-theme-customizer.git
 cd ispconfig-theme-customizer
 sudo ./install.sh
 ```
 
 ```
 ./install.sh [--theme|--module|--all] [--design=<name>] [--copy]
-             [--no-assign] [ISPCONFIG_ROOT]
+             [--no-assign] [--backup-dir=<path>] [ISPCONFIG_ROOT]
 ```
 
 - With no component flag, both halves are installed. `--theme` installs only the design; `--module` installs only the Branding page.
-- `--design=<name>` takes `clarity`, `classic` or `all`, and is repeatable. It is a separate axis from `--theme`/`--module`/`--all`: those pick which halves, this picks which design the theme half means. Default is `clarity`.
+- `--design=<name>` takes `clarity`, `classic`, `cicada` or `all`, and is repeatable. It is a separate axis from `--theme`/`--module`/`--all`: those pick which halves, this picks which design the theme half means. Default is `clarity`.
 - `--copy` copies real files instead of symlinking. With symlinks the panel reads from the clone, so the clone and every parent directory must stay traversable by the web server; the installer warns if they are not.
 - `--no-assign` skips assigning the module to admin users; do it by hand in *System → CP Users → edit the admin user → Modules*.
+- `--backup-dir=<path>` is where a design directory another installer left in `themes/` is moved before this one takes its place, for example a `themes/cicada` from the standalone theme. Default `ISPCONFIG_ROOT/theme-backups`; it must lie outside `themes/`, because ISPConfig offers every directory there in its Design picker.
 - `ISPCONFIG_ROOT` defaults to `/usr/local/ispconfig`.
 
 On a multiserver setup, install only on the server that serves the web interface. Then pick the design per user in *Tools → User Settings → Design*.
@@ -113,11 +120,11 @@ sed -i.bak "s/^\$conf\['theme'\] = '[^']*';/\$conf['theme'] = 'clarity';/" \
 
 ## After any ISPConfig upgrade
 
-Re-run the installer after every panel upgrade, patch releases included (`3.3.1p1` → `3.3.1p2`), passing the same `--design` and `--copy` flags as before. Core compares the stamped `ispconfig_version` against `ISPC_APP_VERSION` as an exact string, and resets affected users to the default theme on any mismatch. After a **major** upgrade, also diff clarity's seven overridden templates against the new stock ones; classic needs no such diff. Full procedure in [UPGRADING.md](UPGRADING.md).
+Re-run the installer after every panel upgrade, patch releases included (`3.3.1p1` → `3.3.1p2`), passing the same `--design` and `--copy` flags as before. Core compares the stamped `ispconfig_version` against `ISPC_APP_VERSION` as an exact string, and resets affected users to the default theme on any mismatch. After a **major** upgrade, also diff clarity's seven overridden templates against the new stock ones; classic and cicada need no such diff, because the same run regenerates their shells. Full procedure in [UPGRADING.md](UPGRADING.md).
 
 ## Compatibility
 
-**ISPConfig 3.3**, developed and verified against 3.3.1p1: clarity's template overrides are pinned to that version's stock markup, and classic's are generated from whatever stock markup the panel has. **ISPConfig 3.2 is not verified** — it has not been tested, so treat it as unknown. Also needed: root shell access to the panel server, the stock `default` theme still present, and PHP CLI for the module-assignment and cleanup helpers (without it the installer prints the manual equivalent).
+**ISPConfig 3.3**, developed and verified against 3.3.1p1: clarity's template overrides are pinned to that version's stock markup, and classic's and cicada's are generated from whatever stock markup the panel has. **ISPConfig 3.2 is not verified** — it has not been tested, so treat it as unknown. Also needed: root shell access to the panel server, the stock `default` theme still present, and PHP CLI for the module-assignment and cleanup helpers (without it the installer prints the manual equivalent).
 
 **Third-party modules** render from the stock `default` templates like every other page. Clarity has been checked against the ISPConfig Billing Module 2.0.12: its jqPlot charts keep their own layout and only their text takes the theme's colours, and its tables keep every row. Clarity folds long tables behind a "Show all" button on the dashboard only; a dashlet table that must always show every row can carry `data-nz-nocap`.
 
@@ -132,11 +139,11 @@ Read this before deploying on a public panel. ISPConfig's theme gate requires th
                [--purge-branding] [--keep-assignment] [ISPCONFIG_ROOT]
 ```
 
-Same component flags as the installer, but `--design` defaults to **all designs** rather than to clarity, because removal has to clear whatever might be on the panel. The other defaults are conservative: `--reset-users` clears `sys_user.app_theme` rows still pointing at a removed design (without it, affected users get a "theme not compatible" banner at every login), and `--purge-branding` wipes the stored branding values, which are otherwise left intact and editable under *System → Interface Config*. Nothing here edits ISPConfig configuration, so `$conf['theme']` is yours to revert; `uninstall.sh` warns before removing anything if it is still set to a design.
+Same component flags as the installer, but `--design` defaults to **all designs** rather than to clarity, because removal has to clear whatever might be on the panel. A design directory another installer put there, one without `brand.php` such as the standalone ispconfig-cicada, stays in place, and its users keep their design. The other defaults are conservative: `--reset-users` clears `sys_user.app_theme` rows still pointing at a removed design (without it, affected users get a "theme not compatible" banner at every login), and `--purge-branding` wipes the stored branding values, which are otherwise left intact and editable under *System → Interface Config*. Nothing here edits ISPConfig configuration, so `$conf['theme']` is yours to revert; `uninstall.sh` warns before removing anything if it is still set to a design.
 
 ## The brand-token contract
 
-The Branding page writes, and a design reads, the `[branding]` and `[misc]` keys in the tables above, in the global `sys_ini` row (`sysini_id = 1`). That is the entire coupling: no shared code, no API. Anything reading the same keys inherits the whole Branding page, and CI fails the build if a key the page writes is not read back. The two implementations, [`themes/clarity/brand.php`](themes/clarity/brand.php) and [`themes/classic/brand.php`](themes/classic/brand.php), are read-only pre-auth stylesheet endpoints that query one row, emit CSS, and do nothing when nothing is set. Which ISPConfig self-identification surfaces can be overridden from inside that envelope is listed in [docs/OVERRIDE-SURFACES.md](docs/OVERRIDE-SURFACES.md).
+The Branding page writes, and a design reads, the `[branding]` and `[misc]` keys in the tables above, in the global `sys_ini` row (`sysini_id = 1`). That is the entire coupling: no shared code, no API. Anything reading the same keys inherits the whole Branding page, and CI fails the build if a key the page writes is not read back. The three implementations, [`themes/clarity/brand.php`](themes/clarity/brand.php), [`themes/classic/brand.php`](themes/classic/brand.php) and [`themes/cicada/brand.php`](themes/cicada/brand.php), are read-only pre-auth stylesheet endpoints that query one row, emit CSS, and do nothing when nothing is set. Which ISPConfig self-identification surfaces can be overridden from inside that envelope is listed in [docs/OVERRIDE-SURFACES.md](docs/OVERRIDE-SURFACES.md).
 
 On clarity you can also brand by file swap and store nothing: replace `themes/clarity/assets/images/wordmark-white.svg` and drop your own icons into `themes/clarity/assets/favicon/`. Stored values override both.
 
@@ -163,9 +170,12 @@ This project sits on top of ISPConfig rather than replacing any part of it. ISPC
 - This project: [MIT](LICENSE).
 - **VMware Clarity (`@cds/core`, MIT).** Surface and status values are derived from Clarity's dark theme tokens, and 29 Clarity icon shapes are bundled verbatim as data-URI SVG masks in `themes/clarity/assets/stylesheets/clarity/icons.css`. That is redistribution of a substantial portion of the upstream work, so the MIT copyright and permission notice ships in that file's header. Keep the header with the shapes if you vendor the theme.
 - **Inter** — [SIL OFL 1.1](themes/clarity/assets/fonts/inter/LICENSE.txt), self-hosted.
+- **Cicada** (`themes/cicada/`) — [BSD-2-Clause](themes/cicada/LICENSE), copyright bright color, after the Cicada theme for OPNsense (`misc/theme-cicada`).
 - ISPConfig is BSD-licensed. This project ships no ISPConfig code and modifies none.
 - Not affiliated with, or endorsed by, **VMware** or the **ISPConfig project**. ISPConfig is a trademark of its respective owner; this is an independent, third-party front end that builds on it.
 
 ---
 
 Maintained by [Wade Beckett](https://github.com/wadejbeckett) as an independent, open-source project. Contributions welcome from anyone.
+
+This fork, [brightcolor/ispconfig-theme-customizer](https://github.com/brightcolor/ispconfig-theme-customizer), adds the cicada design. Its releases are tagged `v<upstream>+cicada.<n>`.

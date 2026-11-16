@@ -284,6 +284,10 @@ foreach (array("setRatio('nz-rail-ratio'", "setRatio('nz-rail-light-ratio'",
                'dataTransfer') as $needle) {
     t_ok("the script wires: $needle", strpos($js, $needle) !== false);
 }
+//* The live panes draw a mark the way the server-rendered swatch beside them
+//* does, filter included, so a Cicada silhouette is not previewed in colour.
+t_ok('the live panes copy the swatch filter',
+    preg_match('/function paintNavBrand\(sel, entry\) \{.*?img\.style\.filter = /s', $js) === 1);
 //* The login pull has to be cleared as well as painted, or a mark an earlier
 //* response put there survives a change that resolves to none.
 t_eq('every nav-brand slot is cleared when nothing resolves',

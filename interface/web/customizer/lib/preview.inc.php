@@ -789,10 +789,74 @@ function customizer_preview_payload($stored_branding, $custom_logo, $posted, $de
 }
 
 /**
+ * The design registry: every brand-aware design this extension ships, in
+ * install order, with the chrome its two logo surfaces sit on. lib/designs.sh
+ * names the same designs for the installer, and tests/brand/probe_registry.php
+ * holds the two lists and the themes/<design>/brand.php readers to one set.
+ *
+ * 'bg_key' is the [branding] colour that repaints this slot's backdrop, or
+ * '' when no operator-settable colour reaches it — the parameter argument
+ * in customizer_logo_variant_for_surface() spelled as data. 'bg_key_light'
+ * is the same thing for LIGHT colour mode, or '' where the operator has no
+ * per-mode say over this slot's backdrop. 'modes' is the
+ * variant => colour pair for a slot whose backdrop follows the viewer's
+ * own light/dark mode, and is empty for every slot that has one backdrop.
+ *
+ * 'default' is only ever reached by a slot with ONE backdrop. A slot with a
+ * 'modes' map has two, and on automatic each mode shows its own mark, so the
+ * per-mode variant below replaces whatever the default said — which is why
+ * clarity's login carries '' here rather than a variant name. It was
+ * 'on_dark', unreachable by any combination of stored values, and reading
+ * like the authoritative default a third design would copy.
+ *
+ * 'light_mark' says how the design draws a LIGHT-background mark on the slot
+ * when that is something other than as supplied: 'silhouette' is cicada.css's
+ * white flattening (customizer_light_mark_style()). Absent means as supplied.
+ *
+ * cicada's two backdrops are fixed: #logo sits on the page ground, the login
+ * mark in the card header cicada.css paints once it has dropped stock's inline
+ * gradient. No colour the operator sets reaches either, so neither has a
+ * bg_key, and automatic asks for the dark-background mark on both.
+ */
+function customizer_design_chrome() {
+    return array(
+        'clarity' => array(
+            'nav'   => array('default' => 'on_dark', 'bg_key' => 'rail_hex', 'bg' => '#01243D',
+                             'bg_key_light' => 'rail_hex_light', 'modes' => array()),
+            'login' => array('default' => '', 'bg_key' => 'login_bg', 'bg' => '',
+                             'bg_key_light' => '',
+                             'modes'   => array('on_dark' => '#17252B', 'on_light' => '#F1F6F8')),
+        ),
+        'classic' => array(
+            'nav'   => array('default' => 'on_light', 'bg_key' => '', 'bg' => '#F2F5F7',
+                             'bg_key_light' => '', 'modes' => array()),
+            'login' => array('default' => 'on_light', 'bg_key' => '', 'bg' => '#EEF0F2',
+                             'bg_key_light' => '', 'modes' => array()),
+        ),
+        'cicada' => array(
+            'nav'   => array('default' => 'on_dark', 'bg_key' => '', 'bg' => '#1C1C1C',
+                             'bg_key_light' => '', 'modes' => array(), 'light_mark' => 'silhouette'),
+            'login' => array('default' => 'on_dark', 'bg_key' => '', 'bg' => '#202020',
+                             'bg_key_light' => '', 'modes' => array(), 'light_mark' => 'silhouette'),
+        ),
+    );
+}
+
+/**
+ * The inline style a swatch gives a mark for a design's 'light_mark'
+ * treatment, or '' for a mark drawn as supplied. The one place the module
+ * spells the silhouette, matching the cicada.css rules for #logo and the
+ * login card's image.
+ */
+function customizer_light_mark_style($light_mark) {
+    return ($light_mark === 'silhouette') ? 'filter:brightness(0) invert(1);opacity:.82' : '';
+}
+
+/**
  * What a given design will really do with the two variants, one entry per thing
  * the operator can look at.
  *
- * $design    'clarity' or 'classic' — the design whose chrome is being described
+ * $design    a key of customizer_design_chrome() — the design whose chrome is described
  * $branding  the [branding] section as stored
  * $labels    array('nav' => …, 'login' => …), ALREADY LOCALISED, naming the two
  *            surfaces to the operator. surface_nav_txt and surface_login_txt say
@@ -858,35 +922,7 @@ function customizer_logo_surfaces($design, $branding, $labels = array()) {
     if(!is_array($branding)) $branding = array();
     if(!is_array($labels))   $labels   = array();
 
-    //* 'bg_key' is the [branding] colour that repaints this slot's backdrop, or
-    //* '' when no operator-settable colour reaches it — the parameter argument
-    //* in customizer_logo_variant_for_surface() spelled as data. 'bg_key_light'
-    //* is the same thing for LIGHT colour mode, or '' where the operator has no
-    //* per-mode say over this slot's backdrop. 'modes' is the
-    //* variant => colour pair for a slot whose backdrop follows the viewer's
-    //* own light/dark mode, and is empty for every slot that has one backdrop.
-    //*
-    //* 'default' is only ever reached by a slot with ONE backdrop. A slot with a
-    //* 'modes' map has two, and on automatic each mode shows its own mark, so the
-    //* per-mode variant below replaces whatever the default said — which is why
-    //* clarity's login carries '' here rather than a variant name. It was
-    //* 'on_dark', unreachable by any combination of stored values, and reading
-    //* like the authoritative default a third design would copy.
-    $chrome = array(
-        'clarity' => array(
-            'nav'   => array('default' => 'on_dark', 'bg_key' => 'rail_hex', 'bg' => '#01243D',
-                             'bg_key_light' => 'rail_hex_light', 'modes' => array()),
-            'login' => array('default' => '', 'bg_key' => 'login_bg', 'bg' => '',
-                             'bg_key_light' => '',
-                             'modes'   => array('on_dark' => '#17252B', 'on_light' => '#F1F6F8')),
-        ),
-        'classic' => array(
-            'nav'   => array('default' => 'on_light', 'bg_key' => '', 'bg' => '#F2F5F7',
-                             'bg_key_light' => '', 'modes' => array()),
-            'login' => array('default' => 'on_light', 'bg_key' => '', 'bg' => '#EEF0F2',
-                             'bg_key_light' => '', 'modes' => array()),
-        ),
-    );
+    $chrome = customizer_design_chrome();
 
     if(!is_string($design) || !isset($chrome[$design])) return array();
 
@@ -966,6 +1002,14 @@ function customizer_logo_surfaces($design, $branding, $labels = array()) {
         $out[] = array('surface' => $surface, 'label' => $label, 'variant' => $variant,
                        'bg' => ($bg_hex !== '' ? $bg_hex : $spec['bg']));
     }
+
+    //* A slot that declares how a light-background mark is drawn passes that on,
+    //* last, to every entry built from it. Slots that declare nothing keep their
+    //* entries' shape, which probe_module compares with ===.
+    foreach($out as $i => $entry) {
+        $slot = $chrome[$design][$entry['surface']];
+        if(!empty($slot['light_mark'])) $out[$i]['light_mark'] = $slot['light_mark'];
+    }
     return $out;
 }
 
@@ -1039,7 +1083,7 @@ function customizer_logo_surfaces_all($designs, $branding, $labels = array()) {
  * in front of the admin instead of nothing at all.
  */
 function customizer_installed_designs($active) {
-    $known = array('clarity', 'classic');
+    $known = array_keys(customizer_design_chrome());
 
     $out = array();
     if(is_string($active) && in_array($active, $known, true)) $out[] = $active;
@@ -1087,7 +1131,7 @@ function customizer_installed_designs($active) {
  * be reported here until an update reverts it.
  */
 function customizer_login_notice_html($panel_theme, $designs, $text, $root) {
-    if(is_string($panel_theme) && in_array($panel_theme, array('clarity', 'classic'), true)) return '';
+    if(is_string($panel_theme) && in_array($panel_theme, array_keys(customizer_design_chrome()), true)) return '';
     if(!is_array($designs) || !isset($designs[0]) || !is_string($designs[0])) return '';
     if(!is_string($text) || $text === '') return '';
     $command = customizer_theme_command($designs[0], $root);
@@ -1184,7 +1228,8 @@ function customizer_logo_preview_html($resolved, $want, $no_logo_text, $fallback
             if(!is_array($s) || !isset($s['variant']) || $s['variant'] !== $want) continue;
             $bg = (isset($s['bg']) && is_string($s['bg'])
                 && preg_match('/^#[0-9A-Fa-f]{6}$/D', $s['bg']) === 1) ? $s['bg'] : '';
-            $boxes[] = array('bg' => $bg, 'label' => (isset($s['label']) && is_string($s['label'])) ? $s['label'] : '');
+            $boxes[] = array('bg' => $bg, 'label' => (isset($s['label']) && is_string($s['label'])) ? $s['label'] : '',
+                             'light_mark' => (isset($s['light_mark']) && is_string($s['light_mark'])) ? $s['light_mark'] : '');
         }
     }
 
@@ -1194,7 +1239,7 @@ function customizer_logo_preview_html($resolved, $want, $no_logo_text, $fallback
     //* and login page whatever this extension prefers, and the panel may have
     //* the other design installed for other users. "Unused" would be a claim we
     //* cannot support; a swatch of the right kind is one we can.
-    if(!$boxes) $boxes[] = array('bg' => '', 'label' => '');
+    if(!$boxes) $boxes[] = array('bg' => '', 'label' => '', 'light_mark' => '');
 
     //* The split. array_slice rather than two loops so both halves are drawn by
     //* the one piece of code below and cannot diverge in edge, ink or caption.
@@ -1226,12 +1271,18 @@ function customizer_logo_preview_html($resolved, $want, $no_logo_text, $fallback
         //* identical for the wrong reason. A dark swatch delimits itself, so its
         //* edge is its own colour.
         $dark = customizer_hex_is_dark($bg);
+
+        //* The mark as the panel draws it on this surface. $from is the variant
+        //* really shown, which is the light one also when a surface asking for
+        //* the dark mark borrows it because no dark mark is stored.
+        $treat = ($from === 'on_light') ? customizer_light_mark_style($b['light_mark']) : '';
+        $mark_style = ($treat !== '') ? ' style="' . $treat . '"' : '';
         $edge = $dark ? $bg : '#D5DDE3';
         $ink  = $dark ? '#93A9BA' : '#5A6B78';
 
         $html .= '<span style="display:inline-block;background:' . $bg . ';border:1px solid ' . $edge
                . ';border-radius:4px;padding:6px 12px;text-align:center;line-height:1">'
-               . '<img src="' . $esc . '" alt="" />';
+               . '<img src="' . $esc . '" alt=""' . $mark_style . ' />';
         if($b['label'] !== '') {
             //* Only the INK is inline, because it is a measured value: the
             //* luminance test above chose it for this swatch's own background.

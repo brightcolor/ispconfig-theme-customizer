@@ -968,4 +968,39 @@ if ($edit_src !== false) {
         strpos($edit_src, "lng('login_design_notice_txt')") !== false);
 }
 
+/* ---- cicada: one registry, two fixed dark surfaces, a silhouette ---------- */
+t_ok('customizer_design_chrome() exists', function_exists('customizer_design_chrome'));
+if (function_exists('customizer_design_chrome')) {
+    t_eq('registry lists three designs in order', array_keys(customizer_design_chrome()),
+        array('clarity', 'classic', 'cicada'));
+
+    $cic = customizer_logo_surfaces('cicada', array());
+    t_eq('cicada surfaces on automatic', $cic, array(
+        array('surface' => 'nav',   'label' => '', 'variant' => 'on_dark', 'bg' => '#1C1C1C', 'light_mark' => 'silhouette'),
+        array('surface' => 'login', 'label' => '', 'variant' => 'on_dark', 'bg' => '#202020', 'light_mark' => 'silhouette'),
+    ));
+    $pin = customizer_logo_surfaces('cicada', array('logo_variant_nav' => 'on_light'));
+    t_eq('cicada obeys an explicit on_light', $pin[0]['variant'], 'on_light');
+    t_eq('a colour the operator sets reaches neither cicada surface',
+        customizer_logo_surfaces('cicada', array('rail_hex' => '#FFFFFF', 'login_bg' => '#FFFFFF')), $cic);
+    t_eq('cicada suppresses the login notice',
+        customizer_login_notice_html('cicada', array('cicada'), 'Currently %s.', '/usr/local/ispconfig'), '');
+
+    //* The swatch shows the mark the panel draws. On Cicada a light-background
+    //* mark is a white silhouette, also when a surface that asks for the dark
+    //* mark borrows the light one because no dark one is stored.
+    $png   = 'data:image/png;base64,iVBORw0KGgo=';
+    $png2  = 'data:image/png;base64,iVBORw0KGgoAAA=';
+    $flat  = 'filter:brightness(0) invert(1);opacity:.82';
+    $html = customizer_logo_preview_html(array('src' => $png, 'from' => 'on_light'), 'on_dark', 'none', '', $cic, 'first');
+    t_ok('a light mark on a cicada swatch is drawn as a silhouette', strpos($html, $flat) !== false, $html);
+    $html = customizer_logo_preview_html(array('src' => $png, 'from' => 'on_light'), 'on_light', 'none', '', $pin, 'first');
+    t_ok('a cicada surface pinned to the light mark previews the silhouette', strpos($html, $flat) !== false, $html);
+    $html = customizer_logo_preview_html(array('src' => $png2, 'from' => 'on_dark'), 'on_dark', 'none', '', $cic, 'first');
+    t_ok('a dark mark on a cicada swatch is drawn as supplied', strpos($html, 'filter:') === false, $html);
+    $html = customizer_logo_preview_html(array('src' => $png, 'from' => 'on_light'), 'on_light', 'none', '',
+        customizer_logo_surfaces('classic', array()), 'first');
+    t_ok('classic swatches stay unfiltered', strpos($html, 'filter:') === false, $html);
+}
+
 t_done();

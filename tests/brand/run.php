@@ -28,6 +28,7 @@ $probes = array(
     'clarity' => __DIR__ . '/probe_clarity.php',
     'classic' => __DIR__ . '/probe_classic.php',
     'module'  => __DIR__ . '/probe_module.php',
+    'cicada'  => __DIR__ . '/probe_cicada.php',
 );
 
 // The render probes execute each design's endpoint BODY — the part that decides
@@ -35,6 +36,7 @@ $probes = array(
 $renders = array(
     'render:clarity' => array(__DIR__ . '/probe_render.php', 'clarity'),
     'render:classic' => array(__DIR__ . '/probe_render.php', 'classic'),
+    'render:cicada'  => array(__DIR__ . '/probe_render.php', 'cicada'),
 );
 
 // Probes that assert STRUCTURE rather than a decision: they emit no matrix and
@@ -45,6 +47,8 @@ $checks = array(
     'preview' => __DIR__ . '/probe_preview.php',
     'page'    => __DIR__ . '/probe_page.php',
     'frozen'  => __DIR__ . '/probe_frozen.php',
+    'cicada-css' => __DIR__ . '/probe_cicada_css.php',
+    'registry'   => __DIR__ . '/probe_registry.php',
 );
 
 $fail      = 0;

@@ -22,7 +22,7 @@ No session, no credentials, no unusual log entry. Anyone who can reach your logi
 
 It also undercuts this project's own **"hide the ISPConfig version"** toggle, which hides the version in the Help page while the same value stays readable one URL away. Applying the snippet below is what makes that toggle effective.
 
-Two documentation files ride along for the same reason and are denied too: `BUILT-AGAINST.txt` and `README.md`.
+Three files ride along in design directories for the same reason and are denied too: `BUILT-AGAINST.txt`, `README.md` and cicada's `LICENSE`.
 
 ## Applying it
 
@@ -33,7 +33,7 @@ ISPConfig already denies files this way in its own panel vhost — dotfiles via 
 Panel vhost, usually `/etc/nginx/sites-available/ispconfig.vhost`. Add inside the `server { }` block, then `nginx -t && systemctl reload nginx`:
 
 ```nginx
-location ~* /themes/[^/]+/(ispconfig_version|ISPC_VERSION|BUILT-AGAINST\.txt|README\.md)$ {
+location ~* /themes/[^/]+/(ispconfig_version|ISPC_VERSION|BUILT-AGAINST\.txt|README\.md|LICENSE)$ {
     deny all;
 }
 ```
@@ -44,7 +44,7 @@ Panel vhost, usually `/etc/apache2/sites-available/ispconfig.vhost`. Add inside 
 
 ```apache
 <DirectoryMatch "^/usr/local/ispconfig/interface/web/themes/[^/]+/">
-    <FilesMatch "^(ispconfig_version|ISPC_VERSION|BUILT-AGAINST\.txt|README\.md)$">
+    <FilesMatch "^(ispconfig_version|ISPC_VERSION|BUILT-AGAINST\.txt|README\.md|LICENSE)$">
         Require all denied
     </FilesMatch>
 </DirectoryMatch>

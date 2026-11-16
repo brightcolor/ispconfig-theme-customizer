@@ -16,9 +16,12 @@ themes/clarity/ispconfig_version
 themes/clarity/ISPC_VERSION
 themes/classic/ispconfig_version
 themes/classic/ISPC_VERSION
+themes/cicada/ispconfig_version
+themes/cicada/ISPC_VERSION
 
-# classic's two shell templates are GENERATED from the target panel's own stock
-# templates at install time (see themes/classic/README.md), so they are never
+# The two shell templates of every generated design (classic, cicada) are
+# GENERATED from the target panel's own stock templates at install time (see
+# lib/shell.sh and each design's README.md), so they are never
 # committed — a stored copy would pin one ISPConfig version's markup and diverge
 # from the panel silently.
 #
@@ -28,6 +31,7 @@ themes/classic/ISPC_VERSION
 # whole point is to carry someone else's brand. Keeping the rules in the repo
 # root means nothing extra ships.
 themes/classic/templates/
+themes/cicada/templates/
 
 # Agent / tooling runtime state — never commit (leaks local paths + session ids)
 .omc/
