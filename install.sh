@@ -120,7 +120,7 @@ on_exit() {
     local rc=$?
     # The generated templates live in a scratch directory until they are
     # verified; never leave one behind, whatever killed us.
-    [ -z "${CLASSIC_TPL_TMP:-}" ] || rm -rf "$CLASSIC_TPL_TMP"
+    [ -z "${SHELL_TPL_TMP:-}" ] || rm -rf "$SHELL_TPL_TMP"
     # Nothing to warn about for --help, a bad flag, or a failed precondition:
     # those exit before anything on the panel has been touched.
     [ "$INSTALL_STARTED" -eq 1 ] || return 0
@@ -148,6 +148,14 @@ on_exit() {
 trap on_exit EXIT
 ORIGINAL_ARGS="$*"
 
+# The design table and the shared shell generator. Sourced before the arguments
+# are read, because --design= is checked against the table.
+LIB_DIR="$(cd "$(dirname "$0")" && pwd)/lib"
+# shellcheck source=lib/designs.sh
+. "$LIB_DIR/designs.sh"
+# shellcheck source=lib/shell.sh
+. "$LIB_DIR/shell.sh"
+
 MODE="symlink"
 ISPC_ROOT="/usr/local/ispconfig"
 ASSIGN=1
@@ -155,11 +163,7 @@ WANT_THEME=""
 WANT_MODULE=""
 DESIGNS=""              # empty until --design is seen; defaults to clarity below
 DESIGN_EXPLICIT=0       # 1 once --design is given, so an ignored one can be reported
-CLASSIC_TPL_TMP=""      # scratch dir for the generated templates (see on_exit)
-
-# Every design this repository ships, in install order. `classic` last so the
-# "Design picker" lists them in the order the docs introduce them.
-ALL_DESIGNS="clarity classic"
+SHELL_TPL_TMP=""        # scratch dir for generated templates (see on_exit)
 
 # Add a design to the list unless it is already there — --design=all followed by
 # --design=classic must not deploy classic twice.
@@ -177,12 +181,16 @@ for arg in "$@"; do
     --design=*)
       DESIGN_EXPLICIT=1
       case "${arg#--design=}" in
-        all)     for d in $ALL_DESIGNS; do want_design "$d"; done ;;
-        clarity) want_design clarity ;;
-        classic) want_design classic ;;
-        # A typo here must not silently install the wrong design (or none):
-        # ISPConfig only shows a design in its picker once it exists on disk.
-        *) echo "ERROR: unknown design: ${arg#--design=} (known: $ALL_DESIGNS, all)" >&2; exit 2 ;;
+        all) for d in $ALL_DESIGNS; do want_design "$d"; done ;;
+        *)
+          # A typo here must not silently install the wrong design (or none):
+          # ISPConfig only shows a design in its picker once it exists on disk.
+          if design_known "${arg#--design=}"; then
+            want_design "${arg#--design=}"
+          else
+            echo "ERROR: unknown design: ${arg#--design=} (known: $ALL_DESIGNS, all)" >&2; exit 2
+          fi
+          ;;
       esac
       ;;
     # Caught explicitly so the value-less form gets a useful message instead of
@@ -319,252 +327,6 @@ deploy() {
   fi
 }
 
-# Generate classic's two shell templates from the TARGET PANEL's stock ones.
-# $1 = directory to write them into (a scratch dir; the caller places them).
-#
-# The whole transform is four mechanical changes, and nothing else may differ:
-#
-#   1. themes/<tmpl_var name='current_theme'>/assets/  ->  themes/default/assets/
-#      Template fallback does NOT extend to assets. Under classic the stock
-#      markup would ask for themes/classic/assets/…, a directory that does not
-#      exist and never will, and every stylesheet, script and icon on the page
-#      would 404. Pinning them to the default theme is what lets classic ship
-#      no assets at all.
-#
-#   2. brand.php, title.php and favicon.php linked immediately before </head>,
-#      so the design can read the brand contract. Nothing else reads it on a
-#      stock shell.
-#
-#   3. every <link rel='icon'> / rel='shortcut icon'> is REPLACED by the
-#      favicon.php link from change 2. Change 1 alone would leave them
-#      pinned to themes/default/assets/favicon/ — i.e. serving the ISPConfig
-#      mark on every tab of a panel whose whole point is to carry someone
-#      else's brand. The endpoint falls back to those very files when nothing is
-#      stored, so an unbranded panel is unchanged.
-#      Stock declares the icon three times (two sized PNGs and the legacy
-#      shortcut .ico) and the replacement is ONE unsized, untyped link: what the
-#      endpoint returns depends on what the operator stored, and a browser skips
-#      a link whose declared type it cannot render. That makes this the one
-#      change that alters the output's LINE COUNT, so the count check below is
-#      derived from how many icon links were actually removed rather than being
-#      a constant — see it for the arithmetic.
-#      The other icon references (apple-touch-icon, mask-icon, manifest, tile
-#      config) are deliberately left pointing at stock's assets: they are
-#      platform install artefacts with their own size and format contracts, not
-#      the tab icon, and each would need its own endpoint to be brandable.
-#
-# Deliberately NOT added: a "generated file, do not edit" banner. It would ship
-# in the HTML of a pre-authentication page and announce, to anyone who can reach
-# the login screen, which extension this panel runs — the exact disclosure a
-# white-label install is for. The warning lives in themes/classic/README.md and
-# in .gitignore instead.
-generate_classic_templates() {
-  local outdir="$1"
-  local stock="$THEMES_DIR/default/templates"
-  local find_str="themes/<tmpl_var name='current_theme'>/assets/"
-  local tpl src out prefix scene ins1 ins2 ins3 src_n out_n rc icons out_icons
-
-  # ONE definition of "this line is a tab-icon <link>", used by the awk transform
-  # (which deletes them) and by the shell check afterwards (which proves exactly
-  # one survives and that it is ours). POSIX character classes rather than \t so
-  # awk and grep -E read the pattern identically. Anchored at the start of the
-  # line: a <link> that does not begin its line is not a shape this generator
-  # claims to understand, and it is refused loudly below rather than mangled.
-  local icon_re="^[[:space:]]*<link[^>]*rel=['\"](shortcut icon|icon)['\"]"
-  local cnt_file="$outdir/.nzc_icon_count"
-
-  for tpl in main.tpl.htm main_login.tpl.htm; do
-    src="$stock/$tpl"
-    out="$outdir/$tpl"
-    if [ ! -f "$src" ]; then
-      echo "ERROR: $src not found — classic is generated from the panel's own stock" >&2
-      echo "       templates and cannot be built without them." >&2
-      return 1
-    fi
-
-    # How deep the page using this template is served from. The app frame is
-    # rendered at the web root and links its assets as 'themes/…'; the login
-    # shell is rendered from /login/ and links '../themes/…'. Root-relative
-    # '/themes/…' would work on a panel mounted at the docroot and break on one
-    # behind a sub-path, so take whichever prefix the stock markup itself uses
-    # and stay exactly as portable as core is.
-    if grep -q -F "href='../${find_str}stylesheets/" "$src"; then
-      prefix='../'
-    elif grep -q -F "href='${find_str}stylesheets/" "$src"; then
-      prefix=''
-    else
-      echo "ERROR: cannot tell how $tpl links its stylesheets." >&2
-      echo "       This ISPConfig's stock shell is not the shape classic knows how to" >&2
-      echo "       transform. Install clarity instead (--design=clarity) and open an" >&2
-      echo "       issue with your ISPConfig version." >&2
-      return 1
-    fi
-
-    # Only the login shell gets ?scene=login. brand.php has a few rules that must
-    # apply to the login screen alone (its background, its one primary button),
-    # and stock's login <body> carries no class, no id and nothing stable to hang
-    # a selector on — clarity adds one in its own template, classic may not touch
-    # the markup. So the scope travels in the URL instead of the DOM.
-    scene=''
-    [ "$tpl" = "main_login.tpl.htm" ] && scene='?scene=login'
-
-    ins1="  <link rel='stylesheet' href='${prefix}themes/classic/brand.php${scene}' />"
-    ins2="  <script src='${prefix}themes/classic/title.php'></script>"
-    # No type/sizes attributes, and the same ${prefix} as the endpoints above so
-    # a panel served from a sub-path keeps working (stock links its favicons
-    # root-relative, but its stylesheets tell us what this panel can rely on).
-    ins3="  <link rel='icon' href='${prefix}themes/classic/favicon.php'>"
-
-    # The footer credits have to become individually addressable, or the Branding
-    # page ends up with two toggles that do nothing on this design. Stock renders
-    # the whole line as bare text inside <footer id='footer'>, so CSS can only
-    # hide all of it or none of it. Wrapping core's own line in one span and
-    # appending ours in a second gives show_ispconfig_credit and
-    # show_theme_credit a target each — the same shape clarity's template uses.
-    #
-    # Both ship ON. Nothing is hidden until an administrator chooses to hide it,
-    # and licence notices are never touched by either toggle — these are courtesy
-    # lines, which is a different thing.
-    cred2="<span class='nzc-credit-theme'><span class='nzc-credit-sep'> &middot; </span><a href='https://github.com/wadejbeckett/ispconfig-theme-customizer' target='_blank' rel='noopener'>Classic</a></span>"
-
-    # index()/substr rather than gsub(): the search string is a literal full of
-    # regex metacharacters, and a literal search cannot be defeated by quoting.
-    #
-    # Exit status is a three-way answer, not a boolean: 0 transformed, 1 no
-    # </head> (nowhere to link anything), 2 an icon <link> that shares its line
-    # with other markup — a shape this generator does not know how to rewrite,
-    # which must stop the install rather than silently drop whatever else was on
-    # that line. The END rule's own exit would override the earlier one, hence
-    # the `aborted` guard.
-    rc=0
-    awk -v find="$find_str" -v repl="themes/default/assets/" \
-        -v ins1="$ins1" -v ins2="$ins2" -v ins3="$ins3" -v cred2="$cred2" \
-        -v icon_re="$icon_re" -v cnt_file="$cnt_file" '
-        function lreplace(s,   acc, p) {
-            acc = ""
-            while ((p = index(s, find)) > 0) {
-                acc = acc substr(s, 1, p - 1) repl
-                s   = substr(s, p + length(find))
-            }
-            return acc s
-        }
-        # how many tags start on this line — one is the shape we handle
-        function tag_count(s,   parts) { return split(s, parts, "<") - 1 }
-        { line = lreplace($0) }
-        line ~ icon_re {
-            if (tag_count(line) != 1) { aborted = 1; exit 2 }
-            icons++
-            next
-        }
-        !done && line ~ /<\/head>/ { print ins3; print ins1; print ins2; done = 1 }
-        # Split the footer credit into two addressable spans, preserving stock
-        # indentation. Matching on both "powered by" and app_link keeps this off
-        # any other line that happens to contain one of them.
-        !fdone && line ~ /powered by/ && line ~ /app_link/ {
-            match(line, /^[ \t]*/)
-            ind  = substr(line, 1, RLENGTH)
-            body = substr(line, RLENGTH + 1)
-            printf "%s<span class=\047nzc-credit-ispconfig\047>%s</span>\n", ind, body
-            printf "%s%s\n", ind, cred2
-            fdone = 1
-            next
-        }
-        { print line }
-        END { print icons + 0 > cnt_file; if (!aborted && !done) exit 1 }
-    ' "$src" > "$out" || rc=$?
-
-    if [ "$rc" -eq 2 ]; then
-      echo "ERROR: an icon <link> shares its line with other markup in $src:" >&2
-      grep -nE "$icon_re" "$src" >&2 || true
-      echo "       classic replaces those links with one pointing at its favicon" >&2
-      echo "       endpoint, and it will not delete a line carrying anything else." >&2
-      echo "       Install clarity instead (--design=clarity) and open an issue with" >&2
-      echo "       your ISPConfig version." >&2
-      return 1
-    elif [ "$rc" -ne 0 ]; then
-      echo "ERROR: no </head> in $src — nowhere to link the brand endpoints." >&2
-      return 1
-    fi
-
-    # How many icon links awk removed. Read from the file awk wrote rather than
-    # counted again here: one definition of the pattern, one engine applying it,
-    # so the count and the deletion can never disagree.
-    icons="$(cat "$cnt_file" 2>/dev/null || true)"
-    case "$icons" in
-      ''|*[!0-9]*)
-        echo "ERROR: the template transform did not report how many icon links it" >&2
-        echo "       removed from $tpl, so its output cannot be verified." >&2
-        return 1
-        ;;
-    esac
-
-    # --- verify the output is the stock file plus exactly those changes ------
-    # A silent miss here is the worst outcome this script has: a classic shell
-    # that still points at themes/classic/assets/ serves a panel with every
-    # stylesheet and script 404ing, and nothing logs it.
-    src_n="$(awk 'END{print NR}' "$src")"
-    out_n="$(awk 'END{print NR}' "$out")"
-    # +3 for the three <head> links (favicon, brand, title), MINUS the icon links
-    # that were replaced by the first of them — stock declares the tab icon three
-    # times, so this is normally a net zero on the app frame and the login shell
-    # alike. Deriving it from the count awk reported, rather than hardcoding
-    # "minus 3", is what lets this check keep working on an ISPConfig that ships
-    # a different number of icon links: the check moves with the transform
-    # instead of having to be relaxed.
-    # +1 more if the footer credit was split in two. That split is expected in
-    # the app frame and absent from the login shell, which has no footer — so it
-    # too is derived from the output rather than assumed, and a future ISPConfig
-    # that moves the footer degrades to a warning instead of failing an install
-    # over a courtesy line.
-    expected=$(( src_n + 3 - icons ))
-    if grep -q "nzc-credit-ispconfig" "$out"; then expected=$(( expected + 1 )); fi
-    if [ "$out_n" -ne "$expected" ]; then
-      echo "ERROR: generated $tpl is $out_n lines, expected $expected" >&2
-      echo "       (stock $src_n + 3 head links - $icons icon links replaced)." >&2
-      return 1
-    fi
-    if [ "$tpl" = "main.tpl.htm" ] && ! grep -q "nzc-credit-ispconfig" "$out"; then
-      echo "WARNING: could not find the footer credit line in $src, so the" >&2
-      echo "         'hide footer credits' toggles will have no effect on classic." >&2
-      echo "         Everything else works; please report your ISPConfig version." >&2
-    fi
-    # After the rewrite the template must not reference the active theme AT ALL.
-    # If a future ISPConfig uses current_theme for something other than an asset
-    # path, that path would resolve into classic's non-existent directory too —
-    # so this check failing means "look at it", not "loosen the check".
-    if grep -q "current_theme" "$out"; then
-      echo "ERROR: $tpl still references current_theme after the rewrite:" >&2
-      grep -n "current_theme" "$out" >&2
-      echo "       Under classic those paths resolve into themes/classic/, which holds" >&2
-      echo "       no assets. Refusing to install a shell that would 404 everything." >&2
-      return 1
-    fi
-    if ! grep -q -F "themes/classic/brand.php" "$out" || ! grep -q -F "themes/classic/title.php" "$out" \
-       || ! grep -q -F "themes/classic/favicon.php" "$out"; then
-      echo "ERROR: the brand endpoints are missing from the generated $tpl." >&2
-      return 1
-    fi
-
-    # Exactly one tab-icon link, and it is ours. This is the check that catches
-    # an icon <link> written in a shape the pattern above did not recognise: the
-    # stock one would survive alongside ours, the browser would be free to pick
-    # either, and a panel would keep flying the ISPConfig flag on some tabs and
-    # the operator's on others — the kind of half-applied white-label that gets
-    # noticed by a customer rather than by a check.
-    out_icons="$(grep -cE "$icon_re" "$out" || true)"
-    if [ "$out_icons" != "1" ]; then
-      echo "ERROR: generated $tpl carries $out_icons tab-icon <link> tags, expected 1:" >&2
-      grep -nE "$icon_re" "$out" >&2 || true
-      return 1
-    fi
-  done
-
-  # The scratch dir is copied from by name, not wholesale, so this only tidies —
-  # but a leftover counter file in a directory the caller may one day copy
-  # entirely is exactly the sort of thing that ships by accident.
-  rm -f "$cnt_file"
-}
-
 # --- warn about a previous split installation -------------------------------
 # Before v3.0.0 this shipped as two repos (clarity-theme-ispconfig and
 # ispconfig-customizer), typically cloned to /root/clarity-theme and
@@ -611,16 +373,17 @@ if [ -n "$WANT_THEME" ]; then
 
     check_stray "$SRC"
 
-    # classic's shell is built from the panel's own stock templates. Build and
-    # VERIFY it before the directory exists on the panel, not after: between
-    # deploy() and the templates landing, classic would be a theme ISPConfig
-    # lists in its Design picker (a directory with no version file is offered)
+    # A generated design's shell is built from the panel's own stock templates.
+    # Build and VERIFY it before the directory exists on the panel, not after:
+    # between deploy() and the templates landing, the design would be a theme
+    # ISPConfig lists in its Design picker (a directory with no version file is
+    # offered)
     # whose every asset path resolves into an empty directory. Generating first
     # shrinks that window to a single move of already-checked files.
-    if [ "$THEME_NAME" = "classic" ]; then
-      CLASSIC_TPL_TMP="$(mktemp -d)"
-      if ! generate_classic_templates "$CLASSIC_TPL_TMP"; then
-        echo "ERROR: could not generate classic's shell templates — nothing was installed" >&2
+    if [ "$(design_field "$THEME_NAME" shell)" = "generated" ]; then
+      SHELL_TPL_TMP="$(mktemp -d)"
+      if ! generate_shell_templates "$THEME_NAME" "$THEMES_DIR/default/templates" "$SRC" "$SHELL_TPL_TMP"; then
+        echo "ERROR: could not generate $THEME_NAME's shell templates — nothing was installed" >&2
         echo "       for this design." >&2
         exit 1
       fi
@@ -628,21 +391,21 @@ if [ -n "$WANT_THEME" ]; then
 
     deploy "$SRC" "$DEST" "$ROOT/themes" "$THEME_NAME"
 
-    if [ "$THEME_NAME" = "classic" ]; then
+    if [ "$(design_field "$THEME_NAME" shell)" = "generated" ]; then
       # In symlink mode this writes THROUGH the link into the clone, which is
-      # where the generated templates belong (themes/classic/.gitignore keeps
-      # them out of git). Replaced wholesale every run, so a template left over
+      # where the generated templates belong (the root .gitignore keeps them
+      # out of git). Replaced wholesale every run, so a template left over
       # from an older ISPConfig can never survive an upgrade.
       rm -rf "$DEST/templates"
       mkdir -p "$DEST/templates"
-      cp "$CLASSIC_TPL_TMP/main.tpl.htm" "$CLASSIC_TPL_TMP/main_login.tpl.htm" "$DEST/templates/"
-      rm -rf "$CLASSIC_TPL_TMP"; CLASSIC_TPL_TMP=""
+      cp "$SHELL_TPL_TMP/main.tpl.htm" "$SHELL_TPL_TMP/main_login.tpl.htm" "$DEST/templates/"
+      rm -rf "$SHELL_TPL_TMP"; SHELL_TPL_TMP=""
       # Explicit modes, because these are the only files here created from
       # scratch rather than unpacked by tar (which restores the archived mode and
       # ignores the umask). Under a hardened root umask such as 027 they would
       # otherwise land unreadable to the panel's web user, and an unreadable
       # shell template renders the entire panel from the stock fallback with
-      # every asset path pointing into themes/classic/ — a blank panel.
+      # every asset path pointing into themes/<design>/ — a blank panel.
       chmod 755 "$DEST/templates" 2>/dev/null || true
       chmod 644 "$DEST/templates/main.tpl.htm" "$DEST/templates/main_login.tpl.htm" 2>/dev/null || true
       if [ "$MODE" = "copy" ] && id -u ispconfig >/dev/null 2>&1; then
@@ -800,11 +563,11 @@ INSTALL_COMPLETED=1
     say "3.3.1p1 -> 3.3.1p2, re-run this script so the version gate is re-stamped."
     say "Skip it and the design silently reverts to 'default' at every login."
     for d in $DESIGNS; do
-      case "$d" in
-        classic)
-          say "For classic that same run also regenerates its two shell templates from the"
-          say "new stock ones, so it stays the stock look by construction — there is"
-          say "nothing to diff by hand."
+      case "$(design_field "$d" shell)" in
+        generated)
+          say "For $d that same run also regenerates its two shell templates from the"
+          say "new stock ones, so it stays in step with the panel by construction —"
+          say "there is nothing to diff by hand."
           ;;
         *)
           say "For $d, then diff the seven overridden templates (three shell + four dashboard)"

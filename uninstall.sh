@@ -78,7 +78,12 @@ WANT_THEME=""
 WANT_MODULE=""
 DESIGNS=""
 DESIGN_EXPLICIT=0
-ALL_DESIGNS="clarity classic"
+
+# The design table (ALL_DESIGNS, design_known, design_field), shared with
+# install.sh. Sourced before the arguments are read, because --design= is
+# checked against it.
+# shellcheck source=lib/designs.sh
+. "$(cd "$(dirname "$0")" && pwd)/lib/designs.sh"
 
 want_design() {
   local d
@@ -94,11 +99,15 @@ for arg in "$@"; do
     --design=*)
       DESIGN_EXPLICIT=1
       case "${arg#--design=}" in
-        all)     for d in $ALL_DESIGNS; do want_design "$d"; done ;;
-        clarity) want_design clarity ;;
-        classic) want_design classic ;;
-        # A typo must not narrow the uninstall to nothing and still report success.
-        *) echo "ERROR: unknown design: ${arg#--design=} (known: $ALL_DESIGNS, all)" >&2; exit 2 ;;
+        all) for d in $ALL_DESIGNS; do want_design "$d"; done ;;
+        *)
+          # A typo must not narrow the uninstall to nothing and still report success.
+          if design_known "${arg#--design=}"; then
+            want_design "${arg#--design=}"
+          else
+            echo "ERROR: unknown design: ${arg#--design=} (known: $ALL_DESIGNS, all)" >&2; exit 2
+          fi
+          ;;
       esac
       ;;
     --design)          echo "ERROR: --design needs a value, e.g. --design=classic" >&2; exit 2 ;;
@@ -221,16 +230,16 @@ fi
 # --- 2. remove the deployed directories -------------------------------------
 # A symlinked install wrote its install-time artefacts THROUGH the link, i.e.
 # into the source clone: the version stamps for every design, and additionally
-# classic's GENERATED templates. Removing only the link would leave them behind,
+# the GENERATED templates of every design whose shell is generated. Removing only the link would leave them behind,
 # and a later install against a DIFFERENT panel would inherit them — a wrong
 # version stamp makes the theme look selectable and then resets every user at
 # login, and a stale generated shell is a copy of another ISPConfig's markup.
 # Clear them via the link first.
 #
 # $1 = destination, $2 = label, $3.. = paths inside the theme dir to clear from
-# the source clone. Pass ONLY generated paths: `templates` is generated for
-# classic but is committed source for clarity, so it must never be listed for
-# a design that ships it.
+# the source clone. Pass ONLY generated paths: `templates` is generated for a
+# design with shell=generated (lib/designs.sh) but is committed source for
+# clarity, so it must never be listed for a design that ships it.
 remove_dest() {
   local dest="$1" label="$2"
   shift 2
@@ -253,10 +262,11 @@ remove_dest() {
 [ -n "$WANT_MODULE" ] && remove_dest "$MOD_DEST" "Branding page directory"
 if [ -n "$WANT_THEME" ]; then
   for d in $DESIGNS; do
-    case "$d" in
-      classic) remove_dest "$THEMES_DIR/$d" "design directory ($d)" ispconfig_version ISPC_VERSION templates ;;
-      *)       remove_dest "$THEMES_DIR/$d" "design directory ($d)" ispconfig_version ISPC_VERSION ;;
-    esac
+    if [ "$(design_field "$d" shell)" = "generated" ]; then
+      remove_dest "$THEMES_DIR/$d" "design directory ($d)" ispconfig_version ISPC_VERSION templates
+    else
+      remove_dest "$THEMES_DIR/$d" "design directory ($d)" ispconfig_version ISPC_VERSION
+    fi
   done
 fi
 
