@@ -870,7 +870,9 @@ function customizer_light_mark_style($light_mark) {
  *
  * Returns a list of array('surface', 'label', 'variant', 'bg') — one entry per
  * (surface, background) pair, because one surface can have two backgrounds; see
- * the mode note below. 'bg' is always a valid #rrggbb.
+ * the mode note below. 'bg' is always a valid #rrggbb. An entry from a slot
+ * that declares 'light_mark' (cicada's 'silhouette') carries it as a fifth,
+ * last key.
  *
  * An unknown $design returns an EMPTY list rather than a guess. A panel can run
  * a third-party theme that has no brand.php at all, in which case nothing here
@@ -882,9 +884,10 @@ function customizer_light_mark_style($light_mark) {
  * of the READERS: logo_variant_nav / logo_variant_login name surfaces, so a
  * design that implements them inherits the operator's choice with no change
  * here, and CI holds every design to that. It is NOT true of the table below,
- * which is this module's hand-written knowledge of two specific designs. A third
- * design gets the correct MARK and no per-surface SWATCH until someone adds an
- * entry here — it degrades to the design-neutral preview rather than describing
+ * which is this module's hand-written knowledge of the designs this project
+ * ships. A further design gets the correct MARK and no per-surface SWATCH
+ * until someone adds an entry here — it degrades to the design-neutral preview
+ * rather than describing
  * chrome wrongly, which is the intended failure but is a failure to describe,
  * not a free inheritance. Moving the table into a per-design declaration the
  * designs themselves ship is the obvious next step and deliberately not taken
@@ -1027,7 +1030,7 @@ function customizer_logo_surfaces($design, $branding, $labels = array()) {
  * a client.
  *
  * $designs   the designs to describe, in display order. The CALLER decides what
- *            is installed — install.sh deploys clarity, classic or both, so
+ *            is installed — install.sh deploys any of this project's designs, so
  *            listing every design this file knows would describe chrome the
  *            panel does not have, which is the failure mode the single-design
  *            function is careful to avoid.
@@ -1216,7 +1219,7 @@ function customizer_theme_command($design, $root) {
  *                  'more'   every remaining swatch, plus the borrowed-variant
  *                           note, in <span class="nz-marks nz-mark-others">
  *                The mark column beside each uploader is 108px wide and a panel
- *                with two designs installed has THREE surfaces asking for the
+ *                with clarity and classic installed has THREE surfaces asking for the
  *                light mark, so one container stacked them vertically and ran
  *                over the path field below it. The caller puts 'first' in the
  *                column and 'more' in a full-width row under the block, where a

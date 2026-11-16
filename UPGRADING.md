@@ -106,11 +106,11 @@ With a symlink install the generated templates are written *through* the link, i
 
 ### cicada: two templates, regenerated on every install run
 
-cicada's shell comes from the same generator (`lib/shell.sh`) with classic's four changes and the same checks, plus four of its own: the stock colour sheet `themes/default/theme.min.css` dropped, stock's `#cc151c` replaced by Cicada's `#dd630d`, `cicada.css` linked directly before `brand.php`, and `cicada-charts.js` loaded after Chart.js where the panel ships it. The installer additionally verifies that the colour sheet was found exactly once, that `brand.php` is the last stylesheet and that the chart script sits right after Chart.js, and refuses a shell that fails any of them. As with classic, there is nothing to diff by hand.
+cicada's shell comes from the same generator (`lib/shell.sh`) with classic's four changes and the same checks, plus four of its own: the stock colour sheet `themes/default/assets/stylesheets/themes/default/theme.min.css` dropped, stock's `#cc151c` replaced by Cicada's `#dd630d`, `cicada.css` linked directly before `brand.php`, and `cicada-charts.js` loaded after Chart.js where the panel ships it. The installer additionally verifies that the colour sheet was found exactly once, that `brand.php` is the last stylesheet and that the chart script sits right after Chart.js, and refuses a shell that fails any of them. As with classic, there is nothing to diff by hand.
 
 ## Re-applying the web-server snippet
 
-The version-gate files sit inside the panel's web root, so the web server serves them as ordinary static files, and an unauthenticated `200` there returns your exact ISPConfig version and patch level. `contrib/webserver/` carries nginx and Apache snippets and the full explanation; they match any theme directory rather than a named one, so a single rule covers both designs.
+The version-gate files sit inside the panel's web root, so the web server serves them as ordinary static files, and an unauthenticated `200` there returns your exact ISPConfig version and patch level. `contrib/webserver/` carries nginx and Apache snippets and the full explanation; they match any theme directory, so a single rule covers every design.
 
 The ISPConfig updater can regenerate the panel vhost when you let it reconfigure services, which drops the snippet. Re-check it after an upgrade, at the same time you re-stamp:
 

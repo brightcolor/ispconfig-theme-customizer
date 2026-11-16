@@ -2,7 +2,7 @@
 
 The extension installs into the panel in two places, and both are in scope:
 
-- `themes/clarity/` and `themes/classic/` — the two designs, each with three endpoints reachable **without a session** (`brand.php`, `title.php`, `favicon.php`), so six in total;
+- `themes/clarity/`, `themes/classic/` and `themes/cicada/` — the three designs, each with three endpoints reachable **without a session** (`brand.php`, `title.php`, `favicon.php`), so nine in total;
 - `interface/web/customizer/` — the **Branding** page, an ISPConfig module in core's sense of the word, which writes the values those endpoints read.
 
 One policy covers both halves, because every `brand.php` reads exactly the `sys_ini` keys `customizer_edit.php` writes.
@@ -91,7 +91,7 @@ What runs, against the parsed tree:
 
 This is verified against **45 cases — 33 bypass attempts, all blocked, and 12 real-world logos** (Inkscape/RDF namespaces, filter chains, embedded data URIs), all still accepted. That corpus ships as `tests/svg/run.php`, and CI runs it on every push, exiting non-zero if any bypass attempt passes or any real logo is refused, so the numbers above cannot go stale without the build going red. Run it with `php tests/svg/run.php`.
 
-The endpoint is admin-only, and every place the logo renders on either design is an image context (an `<img>` tag, or CSS `content: url()` / `background-image`), where browsers apply SVG secure-static mode. The screen is defence in depth rather than the last line of defence.
+The endpoint is admin-only, and every place the logo renders on any design is an image context (an `<img>` tag, or CSS `content: url()` / `background-image`), where browsers apply SVG secure-static mode. The screen is defence in depth rather than the last line of defence.
 
 ## Other controls
 
@@ -103,7 +103,7 @@ The endpoint is admin-only, and every place the logo renders on either design is
 
 ## The pre-auth surface
 
-There are **six** of these: `brand.php` (CSS), `title.php` (JS) and `favicon.php` (an image) under `themes/clarity/`, and the same three under `themes/classic/`. Each design links its own three from both of its shell templates, login shell included, and only one design is active per request — but once both are installed all six exist on disk in the web root and all six are reachable by URL. They run with no session and must be safe for anonymous requests. The read half — query, unescape, normalise, cache — is deliberately the same code in both designs, so the two cannot drift apart.
+There are **nine** of these: `brand.php` (CSS), `title.php` (JS) and `favicon.php` (an image) under `themes/clarity/`, and the same three under `themes/classic/` and `themes/cicada/`. Each design links its own three from both of its shell templates, login shell included, and only one design is active per request — but every installed design's three exist on disk in the web root and are reachable by URL. They run with no session and must be safe for anonymous requests. The read half — query, unescape, normalise, cache — is deliberately the same code in every design, and CI holds the copies to identical decisions, so they cannot drift apart.
 
 - **No application bootstrap.** None of them starts a session, loads `app.inc.php`, or triggers maintenance-mode redirects. Each opens a direct `mysqli` connection with the credentials already in `interface/lib/config.inc.php` and issues a **single read-only** `SELECT` against `sys_ini` row 1.
 - **Always valid output.** `brand.php` always returns HTTP 200 with `Content-Type: text/css` (or 304 on an ETag match); `title.php` always returns HTTP 200 with valid JavaScript; `favicon.php` always returns an image — 200, 304 on an ETag match, or a 302 to a reference the operator set — and **never** a 404, down to a 1×1 transparent PNG if even the design's own shipped icon files cannot be read, because a broken icon shows on every tab. All six re-assert their MIME type after including `config.inc.php`, which emits `text/html` on a web request.
@@ -117,9 +117,9 @@ What these endpoints do disclose, by design, is the panel's configured branding 
 
 ## No core file is modified, and this is the whole write surface
 
-Nothing here patches, replaces or edits any ISPConfig core file. The designs live entirely under `themes/clarity/` and `themes/classic/` and override templates and assets through ISPConfig's own theme loader; clarity borrows the stock theme's vendor CSS and JS by reference and never edits it, and classic ships no assets at all. The Branding page lives entirely under `interface/web/customizer/`. **Nothing under either design directory writes at runtime** — all six endpoints only read.
+Nothing here patches, replaces or edits any ISPConfig core file. The designs live entirely under `themes/clarity/`, `themes/classic/` and `themes/cicada/` and override templates and assets through ISPConfig's own theme loader; clarity borrows the stock theme's vendor CSS and JS by reference and never edits it, classic ships no assets at all, and cicada ships one stylesheet and one chart script and loads every other asset from the stock theme. The Branding page lives entirely under `interface/web/customizer/`. **Nothing under any design directory writes at runtime** — all nine endpoints only read.
 
-`classic` is the one that comes close to core. Its two shell templates are generated at install time from the target panel's own `themes/default/templates/main.tpl.htm` and `main_login.tpl.htm`. `install.sh` **reads** those two files and writes nothing back, to them or to anything else under `themes/default/`; the transformed copies are written into `themes/classic/templates/`. The transform is mechanical and bounded: asset paths pinned to `themes/default/assets/`, the design's three brand endpoints linked immediately before `</head>`, stock's tab-icon `<link>`s replaced by the one pointing at `favicon.php`, and the stock footer credit split into two addressable spans. The installer then checks its own output against the source — line count (derived from how many icon links were actually replaced), no surviving `current_theme` reference, all three endpoints present, exactly one tab-icon link and it is the right one — and aborts rather than deploy a shell it cannot account for.
+`classic` and `cicada` come closest to core. Their two shell templates are generated at install time from the target panel's own `themes/default/templates/main.tpl.htm` and `main_login.tpl.htm`. `install.sh` **reads** those two files and writes nothing back, to them or to anything else under `themes/default/`; the transformed copies are written into `themes/<design>/templates/`. The transform is mechanical and bounded: asset paths pinned to `themes/default/assets/`, the design's three brand endpoints linked immediately before `</head>`, stock's tab-icon `<link>`s replaced by the one pointing at `favicon.php`, and the stock footer credit split into two addressable spans. cicada adds four changes of its own, listed in `themes/cicada/README.md`: the stock colour sheet dropped, the stock theme colour swapped, and its stylesheet and chart script linked. The installer then checks its own output against the source — line count (derived from how many lines each change actually touched), no surviving `current_theme` reference, all three endpoints present, exactly one tab-icon link and it is the right one — and aborts rather than deploy a shell it cannot account for.
 
 There are **no schema changes**: no new tables, no new columns, no `CREATE` or `ALTER` anywhere in the repository. Every write targets a row and column ISPConfig already has. `preview.php` appears nowhere in this table, which is the point of it.
 

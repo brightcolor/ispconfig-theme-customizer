@@ -1,6 +1,6 @@
 # classic — the stock ISPConfig look, made brandable
 
-One of the two designs this extension ships; `clarity` is the other. Stock layout, stock stylesheets, stock everything, except that the logo, panel name and colours set on the in-panel **Branding** page apply to it.
+One of the three designs this extension ships; `clarity` and `cicada` are the others. Stock layout, stock stylesheets, stock everything, except that the logo, panel name and colours set on the in-panel **Branding** page apply to it.
 
 Install with `../../install.sh --design=classic` (`--design=all` gets Clarity as well). `../../uninstall.sh --design=classic` removes just this design; a bare uninstall removes every design it finds.
 

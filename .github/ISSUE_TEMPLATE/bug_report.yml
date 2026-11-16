@@ -30,7 +30,8 @@ body:
       options:
         - clarity
         - classic
-        - Neither (module only, stock default theme)
+        - cicada
+        - None of them (module only, stock default theme)
     validations:
       required: true
   - type: dropdown

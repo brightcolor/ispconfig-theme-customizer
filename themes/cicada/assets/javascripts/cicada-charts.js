@@ -8,8 +8,8 @@
  * template loads it directly after chart.umd.js, and dashlets arrive later
  * with the AJAX page content.
  *
- * Loaded only when the panel ships chart.umd.js (ISPConfig 3.3 and up); on
- * 3.2 make-templates.sh leaves the reference out.
+ * Loaded only when the panel ships chart.umd.js: lib/shell.sh links it right
+ * after Chart.js and leaves it out of a stock shell without Chart.js.
  */
 (function () {
 	'use strict';

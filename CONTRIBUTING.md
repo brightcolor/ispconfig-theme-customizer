@@ -9,7 +9,7 @@ The codebase has two areas, and working out which one a change belongs in is the
 - `themes/` — the design layer, `clarity` and `classic`.
 - `interface/web/customizer/` — the **Branding** page that stores the white-label settings, plus the `bin/` helpers that install, remove and purge them.
 
-They are one contract: the Branding page writes a set of `sys_ini` keys and a brand-aware design reads them. Two designs read them today; anything else reading the same keys inherits the Branding page. CI enforces that contract, so a change on one side that drops a key fails the build rather than silently disabling branding. **Adding a key means adding it on both sides, and to CI's contract list, in the same change.**
+They are one contract: the Branding page writes a set of `sys_ini` keys and a brand-aware design reads them. Three designs read them today; anything else reading the same keys inherits the Branding page. CI enforces that contract, so a change on one side that drops a key fails the build rather than silently disabling branding. **Adding a key means adding it on both sides, and to CI's contract list, in the same change.**
 
 "Module" in this document always means the ISPConfig mechanism — the `customizer` module, listed in `sys_user.modules` and declared by `lib/module.conf.php`, which appears in the top navigation as **Branding**. There is no build step anywhere in this repository.
 
@@ -123,6 +123,6 @@ Each username input method starts from a fresh form/list, checking that it issue
 ## Submitting a pull request
 
 - Keep PRs small and focused: one fix or one feature.
-- Include before and after screenshots for anything visual — both modes for clarity, and both designs if the change touches the shared brand contract.
+- Include before and after screenshots for anything visual — both modes for clarity, and every design if the change touches the shared brand contract.
 - Fill in the PR checklist. It enforces the ground rules above.
 - By contributing you agree your work is licensed under the repository's [MIT license](LICENSE).

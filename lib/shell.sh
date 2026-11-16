@@ -19,7 +19,11 @@
 #
 # Returns 1, with the reason on stderr, when it refuses.
 #
-# The whole transform is four mechanical changes, and nothing else may differ:
+# Every generated design gets four mechanical changes, numbered below; the
+# fourth, splitting the stock footer credit into two addressable spans, is
+# described where it is applied. A design's table entry may add its own:
+# drop a stock sheet, swap the stock colour for its own, link its stylesheet
+# and its chart script (cicada). Nothing else may differ:
 #
 #   1. themes/<tmpl_var name='current_theme'>/assets/  ->  themes/default/assets/
 #      Template fallback does NOT extend to assets. Under a generated design
@@ -41,10 +45,11 @@
 #      Stock declares the icon three times (two sized PNGs and the legacy
 #      shortcut .ico) and the replacement is ONE unsized, untyped link: what the
 #      endpoint returns depends on what the operator stored, and a browser skips
-#      a link whose declared type it cannot render. That makes this the one
-#      change that alters the output's LINE COUNT, so the count check below is
-#      derived from how many icon links were actually removed rather than being
-#      a constant — see it for the arithmetic.
+#      a link whose declared type it cannot render. That makes this one of
+#      the changes that alter the output's LINE COUNT (a design's dropped
+#      sheet, its own stylesheet and its chart script are the others), so the
+#      count check below is derived from how many lines each actually changed
+#      rather than being a constant — see it for the arithmetic.
 #      The other icon references (apple-touch-icon, mask-icon, manifest, tile
 #      config) are deliberately left pointing at stock's assets: they are
 #      platform install artefacts with their own size and format contracts, not

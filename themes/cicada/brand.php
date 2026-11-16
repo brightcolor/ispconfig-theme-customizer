@@ -615,8 +615,8 @@ function brand_parse_config($config)
  * Byte-identical to themes/clarity/brand.php's copy, and to the two patterns in
  * the customizer's lib/preview.inc.php. The duplication is deliberate: this is a
  * pre-authentication endpoint that must keep working with the customizer
- * uninstalled, so it cannot include the module's code, and the two designs are
- * never loaded in the same request. All copies must be changed together.
+ * uninstalled, so it cannot include the module's code, and no two designs are
+ * loaded in the same request. All copies must be changed together.
  *
  * (?!/) rejects protocol-relative "//host/..." — a REMOTE url in disguise, which
  * would defeat the local-path privacy contract; writer-side validation matches.

@@ -30,7 +30,7 @@
 # Branding page: logo, panel name and the per-role news feeds are read by
 # ISPConfig core itself, so those brand the stock theme too. Accent colour,
 # login background and version-hiding need a brand-aware design, which is what
-# --theme installs. Neither design is the product's identity — anything that
+# --theme installs. No design is the product's identity — anything that
 # reads the same sys_ini keys inherits the Branding page, and CI enforces that
 # contract.
 #
@@ -410,8 +410,8 @@ INSTALL_STARTED=1
 # --- theme ------------------------------------------------------------------
 if [ -n "$WANT_THEME" ]; then
   [ -d "$THEMES_DIR" ] || { echo "ERROR: $THEMES_DIR not found — is ISPCONFIG_ROOT correct?" >&2; exit 1; }
-  # Both designs lean on the stock theme: Clarity inherits its vendor assets,
-  # classic inherits everything AND is generated from its templates.
+  # Every design leans on the stock theme: clarity inherits its vendor assets,
+  # classic and cicada load its assets AND are generated from its templates.
   [ -d "$THEMES_DIR/default" ] || { echo "ERROR: $THEMES_DIR/default missing — the designs inherit vendor assets from it." >&2; exit 1; }
 
   # --- detect ISPC_APP_VERSION once, stamp every design with it ------------
@@ -512,7 +512,7 @@ if [ -n "$WANT_THEME" ]; then
   say "  can reach the login page. Deny them at the web-server layer."
   if [ -d "$ROOT/contrib/webserver" ]; then
     say "  Ready-made Apache and nginx snippets: contrib/webserver/ (see its README —"
-    say "  the rules match any design directory, so they cover classic too)."
+    say "  the rules match any design directory, so they cover every design)."
   fi
   say
 fi
@@ -614,8 +614,8 @@ INSTALL_COMPLETED=1
     say "  $STEP. Open Branding and set your logo, panel name, colours and login details."
     say "     Logo, panel name and the news-feed toggle also apply to the STOCK ISPConfig"
     say "     theme — core reads those itself. Accent colour, login background and version"
-    say "     hiding need a brand-aware design: clarity, or classic if you want to keep"
-    say "     the stock look (--design=classic)."
+    say "     hiding need a brand-aware design: clarity, classic for the stock look"
+    say "     (--design=classic), or cicada for a dark one (--design=cicada)."
   fi
   say
   if [ -n "$WANT_THEME" ]; then
