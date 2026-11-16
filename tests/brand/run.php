@@ -36,6 +36,7 @@ $probes = array(
 $renders = array(
     'render:clarity' => array(__DIR__ . '/probe_render.php', 'clarity'),
     'render:classic' => array(__DIR__ . '/probe_render.php', 'classic'),
+    'render:cicada'  => array(__DIR__ . '/probe_render.php', 'cicada'),
 );
 
 // Probes that assert STRUCTURE rather than a decision: they emit no matrix and

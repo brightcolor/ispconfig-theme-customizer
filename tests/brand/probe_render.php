@@ -222,17 +222,85 @@ if (!function_exists('brand_rail_vars')) {
     //* is that the instruction is obeyed, which is what makes showing the
     //* operator its consequence (customizer_logo_surfaces_all) the real fix.
     $css = render($path, array('logo_variant_nav' => 'on_dark', 'logo_on_dark' => $png2), $png, '', '');
-    t_ok('classic: a forced nav variant reaches the header rule',
+    t_ok("$design: a forced nav variant reaches the header rule",
         strpos($css, $png2) !== false, substr($css, 0, 200));
 
     $css = render($path, array('logo_variant_login' => 'on_dark', 'logo_on_dark' => $png2), $png, '', 'login');
-    t_ok('classic: a forced login variant reaches the login rule',
+    t_ok("$design: a forced login variant reaches the login rule",
         strpos($css, $png2) !== false, substr($css, 0, 200));
 
     //* Automatic on classic stays on the light-background mark, which is the one
     //* core itself is already painting, so nothing is emitted for it.
     $css = render($path, array(), $png, '', '');
-    t_ok('classic: automatic leaves core\'s own logo alone', strpos($css, 'background-image') === false);
+    t_ok("$design: automatic leaves core's own logo alone", strpos($css, 'background-image') === false);
+}
+
+/* ---- cicada: its properties, its band, its marks --------------------------
+ * Gated on the capability like the clarity block above: a design that derives
+ * its accent with brand_cic_accent_tokens() is held to what Cicada promises.
+ */
+if (function_exists('brand_cic_accent_tokens')) {
+    $root = function ($css) {
+        return preg_match('/:root \{([^}]*)\}/', $css, $m) ? $m[1] : '';
+    };
+
+    $css = render($path, array('accent_hex' => '#0065AB'));
+    $r   = $root($css);
+    $all = strpos($r, '--cic-accent: #0065AB;') !== false;
+    foreach (array('--cic-accent-text:', '--cic-accent-line:', '--cic-accent-deep:', '--cic-on-accent:') as $tok) {
+        $all = $all && strpos($r, $tok) !== false;
+    }
+    t_ok('cicada: accent emits the five tokens', $all, $css);
+    t_ok('cicada: accent relabels .bg-primary',
+        preg_match('/\.bg-primary \{ color: #(FFFFFF|1C1C1C); \}/', $css) === 1, $css);
+    t_ok('cicada: accent tints the tap highlight',
+        strpos($css, '-webkit-tap-highlight-color: rgba(0, 101, 171, 0.3)') !== false, $css);
+
+    $css = render($path, array('rail_hex' => '#FFFFFF'));
+    if (preg_match('/#main-navigation a \{([^}]*)\}/', $css, $m)) {
+        t_ok('cicada: the white rail is painted', strpos($m[1], 'background: #FFFFFF') !== false, $m[1]);
+        if (preg_match('/(?:^|;)\s*color:\s*([^;]+);/', $m[1], $c)) {
+            $ratio = h_contrast(h_flatten(trim($c[1]), '#FFFFFF'), '#FFFFFF');
+            t_ok(sprintf('cicada: white rail gets readable ink (%.2f:1)', $ratio), $ratio >= 4.5, $c[1]);
+        } else {
+            t_ok('cicada: white rail gets readable ink', false, $m[1]);
+        }
+    } else {
+        t_ok('cicada: the white rail is painted', false, $css);
+    }
+    t_ok('cicada: rail covers the off-canvas submenu',
+        strpos($css, '.pushy ul.subnavi li a:hover') !== false, $css);
+
+    //* A dark-background mark is painted and shown as designed on both surfaces.
+    $login_mark = '.panel-heading[style*="linear-gradient"] > img';
+    $css = render($path, array('logo_on_dark' => $png2), $png, '', '');
+    t_ok('cicada: dark mark is painted on #logo',
+        strpos($css, '#logo { background-image: url("' . $png2 . '")') !== false, $css);
+    t_ok('cicada: dark mark lifts the #logo filter',
+        strpos($css, '#logo { filter: none; opacity: 1; }') !== false, $css);
+    $css = render($path, array('logo_on_dark' => $png2), $png, '', 'login');
+    t_ok('cicada: dark mark is painted on the login card',
+        strpos($css, $login_mark . ' { content: url("' . $png2 . '")') !== false, $css);
+    t_ok('cicada: dark mark lifts the login filter',
+        strpos($css, $login_mark . ' { filter: none; opacity: 1; }') !== false, $css);
+
+    //* Review focus: a light-only logo keeps cicada.css's silhouette, which needs
+    //* nothing from this file. Any filter rule here would undo it.
+    foreach (array('' => 'app frame', 'login' => 'login') as $scene => $where) {
+        $css = render($path, array(), $png, '', $scene);
+        t_ok("cicada: a light mark leaves the silhouette alone ($where)", strpos($css, 'filter') === false, $css);
+    }
+
+    $css = render($path, array('login_bg' => '#F5F5F5'), '', '', 'login');
+    t_ok('cicada: login background in the login scene',
+        strpos($css, 'body { background: #F5F5F5; }') !== false, $css);
+    $css = render($path, array('login_bg' => '#F5F5F5'), '', '', '');
+    t_ok('cicada: no login background in the app frame', strpos($css, 'body {') === false, $css);
+
+    //* Review focus: the panel name becomes a CSS string when no logo exists.
+    $css = render($path, array(), '', 'Acme "Hosting" \\ Co', '');
+    t_ok('cicada: wordmark is escaped', strpos($css, 'content: "Acme \\"Hosting\\" \\\\ Co"') !== false, $css);
+    t_ok('cicada: wordmark sheet stays balanced', css_balanced($css), $css);
 }
 
 /* ---- the design-picker rule is one string, not two -----------------------

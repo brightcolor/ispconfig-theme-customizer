@@ -70,6 +70,7 @@ t_eq('params are the documented values', brand_cic_params(), array(
     'rail_active'    => 13,
     'rail_dim'       => 0.82,
     'default_accent' => '#dd630d',
+    'tap_alpha'      => 0.3,
 ));
 
 /* ---- accent: text, line, deep and label for any stored colour ------------ */
