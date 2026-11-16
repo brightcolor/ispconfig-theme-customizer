@@ -1070,27 +1070,38 @@ function customizer_logo_surfaces_all($designs, $branding, $labels = array()) {
 /**
  * The designs this panel actually has installed, in display order.
  *
- * ISPC_THEMES_PATH is core's own answer to "where do designs live" and
- * is_dir() against it is core's own test — tools/user_settings.php uses exactly
- * this shape before it will let a user select a theme. Asking the filesystem
- * rather than __DIR__ matters because install.sh's default mode SYMLINKS a
- * design into the panel: __DIR__ would resolve back into the git clone, where
- * every design this repository ships exists whether or not it was deployed.
+ * ISPC_THEMES_PATH is core's own answer to "where do designs live";
+ * tools/user_settings.php checks a theme's directory there before it will let a
+ * user select it. Asking the filesystem rather than __DIR__ matters because
+ * install.sh's default mode SYMLINKS a design into the panel: __DIR__ would
+ * resolve back into the git clone, where every design this repository ships
+ * exists whether or not it was deployed.
+ *
+ * A design counts when its directory holds brand.php. Every design this project
+ * installs carries one; a directory of the same name without it came from
+ * another installer (for cicada, typically the standalone ispconfig-cicada),
+ * reads no brand contract, and is not this page's to preview. install.sh and
+ * uninstall.sh tell the two apart by the same file.
  *
  * The active design comes first — it is the one the operator is looking at — and
- * is included even if the directory check cannot see it, so that a panel whose
- * paths are laid out in some way not anticipated here still previews the design
- * in front of the admin instead of nothing at all.
+ * is included even if the directory check cannot see its directory at all, so
+ * that a panel whose paths are laid out in some way not anticipated here still
+ * previews the design in front of the admin. A directory that is there without
+ * brand.php is another installer's, active or not.
  */
 function customizer_installed_designs($active) {
     $known = array_keys(customizer_design_chrome());
+    $look  = defined('ISPC_THEMES_PATH');
 
     $out = array();
-    if(is_string($active) && in_array($active, $known, true)) $out[] = $active;
+    if(is_string($active) && in_array($active, $known, true)) {
+        $dir = $look ? ISPC_THEMES_PATH . '/' . $active : '';
+        if(!$look || !@is_dir($dir) || @is_file($dir . '/brand.php')) $out[] = $active;
+    }
 
     foreach($known as $design) {
         if(in_array($design, $out, true)) continue;
-        if(defined('ISPC_THEMES_PATH') && @is_dir(ISPC_THEMES_PATH . '/' . $design)) $out[] = $design;
+        if($look && @is_file(ISPC_THEMES_PATH . '/' . $design . '/brand.php')) $out[] = $design;
     }
     return $out;
 }
@@ -1119,7 +1130,10 @@ function customizer_installed_designs($active) {
  *               file paths
  *
  * Returns the note's inner HTML, or '' when the login screen already uses one
- * of this extension's designs. Every interpolated value is escaped here; $text
+ * of the designs in $designs. A panel-wide theme that only shares a name with
+ * one of this extension's designs, such as another installer's cicada, gets the
+ * note: it is missing from $designs and reads no brand contract. Every
+ * interpolated value is escaped here; $text
  * is a wordbook value and, like every other one on this page, is trusted
  * markup. str_replace(), never sprintf(), for the reason given at
  * customizer_brand_summary().
@@ -1131,8 +1145,8 @@ function customizer_installed_designs($active) {
  * be reported here until an update reverts it.
  */
 function customizer_login_notice_html($panel_theme, $designs, $text, $root) {
-    if(is_string($panel_theme) && in_array($panel_theme, array_keys(customizer_design_chrome()), true)) return '';
     if(!is_array($designs) || !isset($designs[0]) || !is_string($designs[0])) return '';
+    if(is_string($panel_theme) && in_array($panel_theme, $designs, true)) return '';
     if(!is_string($text) || $text === '') return '';
     $command = customizer_theme_command($designs[0], $root);
     if($command === '') return '';
