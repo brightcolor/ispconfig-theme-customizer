@@ -1,6 +1,6 @@
 # Cicada as a third design
 
-**Date:** 2026-11-16 · **Status:** design approved, spec in review · **Branch:** `feat/cicada-design`
+**Date:** 2026-11-16 · **Status:** implemented · **Branch:** `feat/cicada-design`
 
 **Bases:** this fork at upstream `v3.6.0` (`0d74958`); Cicada from
 [`brightcolor/ispconfig-cicada`](https://github.com/brightcolor/ispconfig-cicada)
