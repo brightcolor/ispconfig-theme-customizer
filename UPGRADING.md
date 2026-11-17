@@ -138,6 +138,10 @@ With a symlink install the panel reads the design from the clone, so a tag check
 
 No release listed below has a migration step, a schema change or a new column. Everything the Branding page stores lives in the same `sys_ini` row throughout.
 
+### v3.6.0+cicada.3
+
+Documentation only. `contrib/webserver/README.md` now says where the nginx rule goes: above the static-file location in ISPConfig's panel vhost. Placed below it, `BUILT-AGAINST.txt` stays readable. If you applied the nginx snippet earlier, request `/themes/clarity/BUILT-AGAINST.txt` on the panel port; anything other than `403` means the rule should move up. Nothing to re-run.
+
 ### v3.6.0+cicada.2
 
 Tightens the installer and the Branding page around designs that another installer put on the panel. Re-run `install.sh` as you installed; nothing stored changes, and in the generated shells only cicada's chart-script cache buster moves.

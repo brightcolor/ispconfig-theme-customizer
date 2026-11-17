@@ -30,13 +30,19 @@ ISPConfig already denies files this way in its own panel vhost — dotfiles via 
 
 ### nginx
 
-Panel vhost, usually `/etc/nginx/sites-available/ispconfig.vhost`. Add inside the `server { }` block, then `nginx -t && systemctl reload nginx`:
+Panel vhost, usually `/etc/nginx/sites-available/ispconfig.vhost`. Add inside the `server { }` block, **above** the static-file location ISPConfig writes there (`# serve static files directly`), then `nginx -t && systemctl reload nginx`:
 
 ```nginx
 location ~* /themes/[^/]+/(ispconfig_version|ISPC_VERSION|BUILT-AGAINST\.txt|README\.md|LICENSE)$ {
     deny all;
 }
+
+# serve static files directly
+location ~* ^.+\.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt)$ {
+    ...
 ```
+
+The position matters. nginx tries regex locations in the order they appear and takes the first match, and ISPConfig's static-file location matches every `.txt`. Placed below it, the rule still denies the other four names, while `BUILT-AGAINST.txt` stays readable — and it names the ISPConfig version clarity was built against.
 
 ### Apache
 
@@ -57,6 +63,14 @@ curl -sk -o /dev/null -w '%{http_code}\n' https://panel.example.com:8080/themes/
 ```
 
 `403` (or `404`) means the rule is live. `200` means it is not — check the snippet is inside the panel vhost's server block and that the config was reloaded.
+
+On nginx, check the position with a `.txt` name as well:
+
+```bash
+curl -sk -o /dev/null -w '%{http_code}\n' https://panel.example.com:8080/themes/clarity/BUILT-AGAINST.txt
+```
+
+`403` means the rule sits above the static-file location. It answers `403` with or without clarity installed, because nginx applies the deny before it looks for the file. `404`, or `200` with clarity installed, means the static-file location answered first: move the rule above it.
 
 **The panel must still work afterwards.** The deny rule only affects HTTP requests; ISPConfig reads those files from disk, which is unaffected. Log out and back in to confirm your theme is still applied — if it silently reverts to the default theme, the version file itself is missing or stale, which is an installer problem, not this snippet.
 
